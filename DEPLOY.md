@@ -66,8 +66,21 @@ und blendet oben den Hinweis „Demo · erfundene Daten" ein. Genau das willst d
 Vorführen. In einer produktiven Umgebung mit echten Daten hat die Variable nichts zu
 suchen.
 
-Das Deployment wandert dank `vercel.json` nach **Frankfurt (fra1)**, und `vercel-build`
-legt die Tabellen beim Deployen automatisch an.
+`vercel-build` legt die Tabellen beim Deployen automatisch an.
+
+### Wo die Daten liegen
+
+Die **Datenbank steht in Frankfurt** – das legst du in Schritt 1 fest und es gilt unabhängig
+vom Hosting.
+
+Die **Anwendung selbst** läuft dort, wo Vercel sie hinlegt; auf der kostenlosen Stufe ist das
+die Standardregion des Kontos (oft `iad1`, USA). Eine eigene Ausführungsregion zu erzwingen
+ist ein kostenpflichtiges Vercel-Feature – ein `vercel.json` mit `regions` lässt den Deploy
+auf der freien Stufe fehlschlagen, nachdem der Build bereits durchgelaufen ist.
+
+Für diese Demo mit erfundenen Daten ist das ohne Belang. Für einen echten Einsatz ist es
+ein Argument mehr, das mit der TNG-IT zu klären – entweder eine bezahlte Stufe mit
+EU-Region oder gleich internes Hosting (siehe unten, es besteht keine Bindung an Vercel).
 
 ## 4. Fertig – öffnen und anmelden
 
