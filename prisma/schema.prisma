@@ -1,0 +1,229 @@
+// Churntron – Datenmodell
+//
+// GRUNDREGEL: In dieser Datenbank stehen KEINE Klardaten von Kundinnen und Kunden.
+// Kein Name, keine Adresse, keine Telefonnummer, keine E-Mail-Adresse.
+// Der Bezug zum Kunden laeuft ausschliesslich ueber Contract.externalRef
+// (Vertrags- bzw. Kundennummer). Die Klardaten bleiben im lokalen Kampagnen-Lookup.
+// Der Test in src/lib/__tests__/schema-privacy.test.ts haelt diese Regel fest.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  REP
+  ADMIN
+}
+
+enum ContractStatus {
+  ACTIVE
+  CANCELLED
+  REVOKED
+  WON_BACK
+  LOST
+}
+
+enum CancelReason {
+  PRICE
+  SERVICE
+  MOVE
+  COMPETITOR
+  TECHNICAL
+  TERM
+  OTHER
+  UNKNOWN
+}
+
+enum ActivityType {
+  CALL
+  EMAIL
+  OFFER
+  NOTE
+}
+
+enum ActivityOutcome {
+  REACHED
+  NOT_REACHED
+  CALLBACK
+  WON
+  LOST
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  CLAWBACK
+}
+
+enum ChallengeMetric {
+  CONTRACTS_WON
+  CHURN_SAVED
+  CALLS_DONE
+  POINTS
+}
+
+enum SourceKind {
+  EXCEL
+  LOOKUP_CSV
+  DYNAMICS
+  SEED
+}
+
+model Team {
+  id      String @id @default(cuid())
+  name    String @unique
+  members User[]
+}
+
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  displayName  String
+  passwordHash String
+  role         Role    @default(REP)
+  teamId       String?
+  team         Team?   @relation(fields: [teamId], references: [id])
+
+  contracts    Contract[]
+  activities   ChurnActivity[]
+  commissions  Commission[]
+  pointsEvents PointsEvent[]
+  imports      ImportBatch[]
+
+  createdAt DateTime @default(now())
+}
+
+model Contract {
+  /// Vertrags- oder Kundennummer aus der Excel-Liste. Kein Klarname!
+  id           String         @id @default(cuid())
+  externalRef  String         @unique
+  customerRef  String?
+  product      String?
+  status       ContractStatus @default(ACTIVE)
+  cancelReason CancelReason?
+  /// Originaltext des Kuendigungsgrundes aus der Liste, fuer spaetere Auswertung
+  reasonRaw    String?
+  monthlyCents Int?
+  cancelledAt  DateTime?
+  revokedAt    DateTime?
+  /// Empfohlener Wiedervorlage-Zeitpunkt (Kuendigung + 60-90 Tage)
+  reactivateAt DateTime?
+
+  ownerId String?
+  owner   User?   @relation(fields: [ownerId], references: [id])
+
+  source        SourceKind
+  importBatchId String?
+  importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id])
+
+  activities   ChurnActivity[]
+  commissions  Commission[]
+  pointsEvents PointsEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, cancelReason])
+  @@index([reactivateAt])
+}
+
+model ChurnActivity {
+  id         String           @id @default(cuid())
+  contractId String
+  contract   Contract         @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User             @relation(fields: [userId], references: [id])
+  type       ActivityType
+  outcome    ActivityOutcome?
+  note       String?
+  createdAt  DateTime         @default(now())
+
+  @@index([contractId, createdAt])
+}
+
+model CommissionRule {
+  id           String    @id @default(cuid())
+  name         String
+  product      String?
+  /// Entweder Fixbetrag ODER Prozentsatz – das Provisionsmodell steht noch nicht fest,
+  /// deshalb liegt es als Daten in der DB und nicht im Code.
+  amountCents  Int?
+  percent      Decimal?  @db.Decimal(5, 2)
+  clawbackDays Int       @default(180)
+  validFrom    DateTime
+  validTo      DateTime?
+
+  commissions Commission[]
+}
+
+model Commission {
+  id         String   @id @default(cuid())
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  ruleId     String?
+  rule       CommissionRule? @relation(fields: [ruleId], references: [id])
+
+  amountCents Int
+  status      CommissionStatus @default(PENDING)
+  /// Abrechnungsmonat im Format "2026-09"
+  periodMonth String
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, periodMonth, status])
+  @@index([status])
+}
+
+model Challenge {
+  id          String          @id @default(cuid())
+  title       String
+  description String?
+  metric      ChallengeMetric
+  target      Int
+  startsAt    DateTime
+  endsAt      DateTime
+  createdById String
+
+  pointsEvents PointsEvent[]
+
+  @@index([startsAt, endsAt])
+}
+
+model PointsEvent {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  contractId  String?
+  contract    Contract?  @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  challengeId String?
+  challenge   Challenge? @relation(fields: [challengeId], references: [id], onDelete: SetNull)
+
+  /// z.B. "contract_won", "churn_saved", "call_done"
+  kind       String
+  points     Int
+  occurredAt DateTime @default(now())
+
+  @@index([userId, occurredAt])
+  @@index([challengeId, occurredAt])
+}
+
+model ImportBatch {
+  id       String @id @default(cuid())
+  filename String
+  rowCount Int
+  /// Erkannte Spaltenzuordnung – macht jeden Import nachvollziehbar
+  mapping  Json
+
+  importedById String
+  importedBy   User   @relation(fields: [importedById], references: [id])
+
+  contracts Contract[]
+  createdAt DateTime @default(now())
+}
