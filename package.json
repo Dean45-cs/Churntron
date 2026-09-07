@@ -6,7 +6,7 @@
     "dev": "next dev",
     "dev:skeletons": "SKELETON_DEMO=1 next dev",
     "build": "next build",
-    "vercel-build": "prisma migrate deploy && next build",
+    "vercel-build": "prisma migrate deploy && SEED_ONLY_IF_EMPTY=1 prisma db seed && next build",
     "start": "next start",
     "lint": "eslint",
     "format": "prettier --write .",

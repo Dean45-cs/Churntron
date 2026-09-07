@@ -55,6 +55,15 @@ const REASON_TEXTS: Record<CancelReason, string[]> = {
 }
 
 async function main() {
+  // Beim Deployen laeuft der Seed bei JEDEM Build mit. Ohne diese Bremse wuerde
+  // jeder Redeploy die Datenbank leerraeumen. Mit SEED_ONLY_IF_EMPTY=1 fuellt er
+  // nur eine noch leere Datenbank – ein zweiter Aufruf tut dann nichts mehr.
+  // Von Hand aufgerufen (npm run db:seed) setzt er weiterhin alles zurueck.
+  if (process.env.SEED_ONLY_IF_EMPTY === '1' && (await db.user.count()) > 0) {
+    console.log('Datenbank ist bereits befuellt – Seed uebersprungen.')
+    return
+  }
+
   console.log('Raeume alte Seed-Daten weg ...')
   await db.pointsEvent.deleteMany()
   await db.commission.deleteMany()

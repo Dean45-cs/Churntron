@@ -59,19 +59,22 @@ suchen.
 Das Deployment wandert dank `vercel.json` nach **Frankfurt (fra1)**, und `vercel-build`
 legt die Tabellen beim Deployen automatisch an.
 
-## 4. Demo-Daten einspielen
+## 4. Fertig – öffnen und anmelden
 
-Die Tabellen sind nach dem Deploy da, aber leer. Einmalig vom eigenen Rechner aus füllen:
+Du musst nichts weiter tun: `vercel-build` legt beim Deployen die Tabellen an **und
+füllt sie mit den Demo-Daten**, solange die Datenbank noch leer ist. Bei jedem weiteren
+Deploy passiert das nicht noch einmal – deine Daten bleiben stehen.
 
-```bash
-DATABASE_URL="<dein Neon-String>" npm run db:seed
-```
+Vercel-URL öffnen und mit `rep@tng.de` oder `admin@tng.de` anmelden. Passwort ist der
+Wert, den du als `DEMO_PASSWORD` gesetzt hast.
 
-Danach die Vercel-URL öffnen und mit `rep@tng.de` oder `admin@tng.de` anmelden –
-Passwort ist der Wert, den du als `DEMO_PASSWORD` gesetzt hast.
-
-> Der Seed **löscht vorher alles** in der Datenbank. Solange dort nur Demo-Daten liegen,
-> ist das gewollt.
+> **Demo-Daten zurücksetzen**, falls du beim Vorführen etwas verstellt hast: in Neon unter
+> _SQL Editor_ einmal ausführen und danach bei Vercel _Redeploy_ klicken.
+>
+> ```sql
+> TRUNCATE "PointsEvent","Commission","ChurnActivity","Contract",
+>          "ImportBatch","CommissionRule","Challenge","User","Team" CASCADE;
+> ```
 
 ---
 

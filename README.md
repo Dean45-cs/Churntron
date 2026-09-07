@@ -123,19 +123,19 @@ aus dem Google-Fonts-Urteil ist damit von Haus aus umgangen.
 
 ## Befehle
 
-| Befehl                  | Zweck                                       |
-| ----------------------- | ------------------------------------------- |
-| `npm run dev`           | Entwicklungsserver                          |
-| `npm run dev:skeletons` | Entwicklungsserver mit sichtbaren Skeletons |
-| `npm run build`         | Produktions-Build inkl. Typprüfung          |
-| `npm run lint`          | ESLint                                      |
-| `npm test`              | Vitest                                      |
-| `npm run format`        | Prettier                                    |
-| `npm run db:up`         | Datenbank per Docker starten                |
-| `npm run db:down`       | Datenbank anhalten                          |
-| `npm run db:migrate`    | Prisma-Migration                            |
-| `npm run db:seed`       | Demo-Daten neu erzeugen                     |
-| `npm run db:studio`     | Prisma Studio                               |
+| Befehl                  | Zweck                                        |
+| ----------------------- | -------------------------------------------- |
+| `npm run dev`           | Entwicklungsserver                           |
+| `npm run dev:skeletons` | Entwicklungsserver mit sichtbaren Skeletons  |
+| `npm run build`         | Produktions-Build inkl. Typprüfung           |
+| `npm run lint`          | ESLint                                       |
+| `npm test`              | Vitest                                       |
+| `npm run format`        | Prettier                                     |
+| `npm run db:up`         | Datenbank per Docker starten                 |
+| `npm run db:down`       | Datenbank anhalten                           |
+| `npm run db:migrate`    | Prisma-Migration                             |
+| `npm run db:seed`       | Demo-Daten neu erzeugen (setzt alles zurück) |
+| `npm run db:studio`     | Prisma Studio                                |
 
 ## Technik
 
