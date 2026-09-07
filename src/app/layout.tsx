@@ -19,6 +19,9 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: 'Churntron – TNG Vertriebs-Tool',
   description: 'Churn-Leitfaden, Provisionen und Challenges für den TNG-Vertrieb.',
+  // Der Link darf weitergegeben werden, in Suchmaschinen gehoert die Seite nicht:
+  // sie traegt TNG-Farben und -Namen.
+  robots: { index: false, follow: false },
 }
 
 /**

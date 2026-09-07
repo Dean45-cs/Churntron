@@ -3,6 +3,7 @@ import { signOut } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { initials } from '@/lib/utils'
+import { isSkeletonDemo } from '@/lib/dev'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
 
 export function Topbar({
@@ -16,6 +17,10 @@ export function Topbar({
 }) {
   return (
     <header className="border-border bg-background/85 sticky top-0 z-10 flex h-16 items-center gap-3 border-b px-6 backdrop-blur">
+      {/* Die oeffentliche Demo laeuft mit erfundenen Daten und gebremsten
+          Abfragen – das muss man ihr ansehen. */}
+      {isSkeletonDemo ? <Badge variant="accentSubtle">Demo · erfundene Daten</Badge> : null}
+
       <div className="ml-auto flex items-center gap-3">
         <ThemeToggle />
 

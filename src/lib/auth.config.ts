@@ -10,6 +10,16 @@ import type { NextAuthConfig } from 'next-auth'
 export const authConfig = {
   pages: { signIn: '/login' },
   session: { strategy: 'jwt' },
+  /**
+   * Ohne das wirft NextAuth hinter jedem Proxy `UntrustedHost` und der Login
+   * laeuft ins Leere – lokal im Produktionsmodus genauso wie beim Hosting.
+   *
+   * Vertretbar, weil wir ausschliesslich Credentials verwenden: es gibt keinen
+   * OAuth-Rueckruf, dessen Ziel ueber einen gefaelschten Host-Header umgebogen
+   * werden koennte. Sobald ein echter Anbieter dazukommt (etwa Entra ID, siehe
+   * PLAN.md), gehoert das hier auf den Pruefstand und AUTH_URL fest gesetzt.
+   */
+  trustHost: true,
   providers: [],
   callbacks: {
     authorized({ auth, request }) {

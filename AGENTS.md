@@ -69,6 +69,11 @@ Block und keinen generischen grauen Kasten. Wenn du eine Komponente mit fester H
 Zum Anschauen: `npm run dev:skeletons` – setzt `SKELETON_DEMO=1` und verzögert die
 Abfragen künstlich. Ohne das antwortet der lokale Postgres zu schnell, um etwas zu sehen.
 
+`devDelay()` hängt allein an `SKELETON_DEMO`, **auch in Produktion** – die öffentliche
+Demo soll genau diese Ladezustände zeigen. Damit die Bremse nicht für echtes Verhalten
+gehalten wird, trägt die Topbar dann den Hinweis „Demo · erfundene Daten". In einer
+produktiven Umgebung mit echten Daten wird die Variable nicht gesetzt (siehe `DEPLOY.md`).
+
 ## Design
 
 TNG-Farbwelt: Navy `#00336E` trägt Navigation und Primäraktionen, Orange `#F18700`
