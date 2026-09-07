@@ -8,48 +8,58 @@ und sechs ausgedachte Kolleginnen und Kollegen aus dem Seed. Deshalb ist diese D
 datenschutzrechtlich unkritisch. Lies trotzdem den Abschnitt
 [Bevor echte Daten drauf dürfen](#bevor-echte-daten-drauf-dürfen) am Ende.
 
-Du brauchst zwei kostenlose Konten: **Neon** (Datenbank) und **Vercel** (Hosting).
-Beides geht mit GitHub-Login. Rechne mit 15 Minuten.
+Du brauchst nur ein Konto: **Vercel** (Login mit GitHub). Die Datenbank legst du aus
+Vercel heraus mit an. Rechne mit 15 Minuten.
 
 ---
 
-## 1. Datenbank anlegen (Neon)
+## 1. Datenbank anlegen – aus Vercel heraus
 
-1. Auf [neon.com](https://neon.com) anmelden und ein neues Projekt anlegen.
-2. Als Region **Europe (Frankfurt) – eu-central-1** wählen. Wichtig: damit liegen die
-   Daten in der EU.
-3. Den **Connection String** kopieren. Er sieht so aus:
-   `postgresql://benutzer:passwort@ep-irgendwas.eu-central-1.aws.neon.tech/neondb?sslmode=require`
+1. Auf [vercel.com](https://vercel.com) mit GitHub anmelden.
+2. Oben im Menü auf **Storage** → **Create Database** → **Neon** (Serverless Postgres).
+3. Als Region **Frankfurt (`eu-central-1`)** wählen. Wichtig: damit liegen die Daten in
+   der EU.
+4. Name z. B. `churntron`, anlegen.
 
-Leg ihn kurz beiseite, du brauchst ihn gleich zweimal.
+**Du musst dir keinen Connection String merken.** Sobald die Datenbank mit dem Projekt
+verbunden ist, trägt Vercel `DATABASE_URL` und `DATABASE_URL_UNPOOLED` von selbst ein.
+
+> Das Passwort der Datenbank ist ein echtes Zugangsdatum: nicht in Chats, Tickets oder
+> Screenshots weitergeben. Falls es doch einmal passiert, in der Neon-Ansicht das
+> Passwort der Rolle zurücksetzen – oder die Datenbank löschen und neu anlegen, solange
+> nur Demo-Daten drin sind.
 
 ## 2. Ein Secret erzeugen
 
-NextAuth signiert damit die Sitzungen. Erzeuge dir einen zufälligen Wert:
+NextAuth signiert damit die Sitzungen. Erzeuge dir einen zufälligen Wert – wenn du kein
+Terminal hast, tut es jeder Passwortgenerator mit 32 Zeichen:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
-Das Ergebnis kommt gleich als `AUTH_SECRET` in die Umgebungsvariablen. **Nimm nicht den
-Wert aus `.env.example`** – der steht öffentlich im Repository.
+**Nimm nicht den Wert aus `.env.example`** – der steht öffentlich im Repository.
 
-## 3. Bei Vercel importieren
+## 3. Projekt importieren und verbinden
 
-1. Auf [vercel.com](https://vercel.com) mit GitHub anmelden.
-2. **Add New → Project** und das Repository `Dean45-cs/Churntron` auswählen.
-3. Als **Branch** `claude/vertriebs-tool-tng-plan-im91wm` wählen, solange der Pull Request
+1. **Add New → Project**, Repository `Dean45-cs/Churntron` auswählen.
+2. Als **Branch** `claude/vertriebs-tool-tng-plan-im91wm` wählen, solange der Pull Request
    noch nicht gemergt ist.
-4. Unter **Environment Variables** diese vier eintragen:
+3. Unter **Environment Variables** diese drei eintragen – `DATABASE_URL` gehört **nicht**
+   dazu, die kommt aus der Datenbank-Verbindung:
 
    | Name            | Wert                                        |
    | --------------- | ------------------------------------------- |
-   | `DATABASE_URL`  | der Connection String aus Schritt 1         |
    | `AUTH_SECRET`   | der erzeugte Wert aus Schritt 2             |
    | `DEMO_PASSWORD` | ein Passwort deiner Wahl, z. B. `churntron` |
    | `SKELETON_DEMO` | `1`                                         |
 
-5. **Deploy** klicken.
+4. **Deploy** klicken.
+5. Danach im Projekt auf **Storage** → die Datenbank aus Schritt 1 → **Connect**.
+   Vercel setzt jetzt `DATABASE_URL` und löst automatisch einen neuen Build aus.
+
+> Der **erste Build schlägt fehl**, wenn die Datenbank beim Deployen noch nicht verbunden
+> war. Das ist normal – nach dem Verbinden läuft der nächste Build durch.
 
 `SKELETON_DEMO=1` macht die Ladezustände sichtbar (die Datenbank wäre sonst zu schnell)
 und blendet oben den Hinweis „Demo · erfundene Daten" ein. Genau das willst du beim
