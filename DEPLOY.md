@@ -102,29 +102,56 @@ Wert, den du als `DEMO_PASSWORD` gesetzt hast.
 
 ## Wenn etwas nicht klappt
 
-**Der Build läuft durch, dann `No Output Directory named "dist" found`**
-Vercel hält das Projekt nicht für eine Next.js-Anwendung und sucht nach dem falschen
-Ausgabeordner. Das `vercel.json` im Repo setzt `"framework": "nextjs"` und sollte das
-verhindern. Falls es trotzdem auftritt: **Settings → Build & Deployment → Framework
-Preset** auf **Next.js** stellen und ein eventuell gesetztes **Output Directory** wieder
-leeren.
+**Zuerst immer: `/api/health` aufrufen.** Hänge das an deine Deployment-URL an, also
+`…vercel.app/api/health`. Die Seite antwortet mit einer kurzen Übersicht, welche
+Umgebungsvariablen gesetzt sind und ob die Datenbank antwortet — und nennt unter `fehlt`
+direkt, was zu tun ist.
 
-**Der Build bricht ab mit `datasource.url property is required`**
-`DATABASE_URL` fehlt in den Environment Variables oder wurde nur für eine Umgebung
-gesetzt. In den Projekteinstellungen prüfen, dass sie für _Production_ gilt, und neu
-deployen.
+Dort stehen **nur Ja/Nein-Angaben, niemals die Werte selbst**; du kannst die Ausgabe also
+gefahrlos weitergeben.
 
-**Login lädt und wirft dich zurück auf die Anmeldeseite**
-Wenn im Vercel-Log `UntrustedHost` steht, fehlt `trustHost` in `src/lib/auth.config.ts`.
-Dort ist es gesetzt, das sollte also nicht passieren – falls doch, dort nachsehen.
+| Was `/api/health` zeigt                  | Was zu tun ist                                                           |
+| ---------------------------------------- | ------------------------------------------------------------------------ |
+| `AUTH_SECRET: false`                     | Variable anlegen (Schritt 2), für **alle** Umgebungen, dann neu deployen |
+| `DATABASE_URL: false`                    | Im Projekt unter **Storage** die Datenbank verbinden                     |
+| `datenbank: fehler` trotz gesetzter URL  | Datenbank verbunden, aber nicht erreichbar — Neon-Projekt prüfen         |
+| `bereit: true`, Login scheitert trotzdem | Passwort passt nicht zum gespeicherten Hash — siehe unten                |
+
+> **Umgebungsvariablen gelten bei Vercel pro Umgebung.** Eine nur für _Production_
+> gesetzte Variable fehlt in einem **Preview**-Deployment — und der Branch läuft als
+> Preview, solange der Pull Request nicht gemergt ist. Setz die Variablen deshalb für
+> Production, Preview und Development.
+
+**„There was a problem with the server configuration" beim Login**
+Auth.js meldet damit jeden Konfigurationsfehler, ohne zu sagen welchen. `/api/health`
+sagt es.
 
 **Login sagt „E-Mail oder Passwort stimmt nicht"**
-Schritt 4 lief noch nicht, die Datenbank ist leer. Oder: du hast `DEMO_PASSWORD` bei
-Vercel geändert, _nachdem_ du geseedet hast – die Passwörter liegen gehasht in der
-Datenbank. Dann einfach nochmal seeden.
+Die Passwörter liegen **gehasht** in der Datenbank, gesetzt beim Seed. Wurde
+`DEMO_PASSWORD` nachträglich geändert, passt der neue Wert nicht mehr dazu. Abhilfe:
+Variable `FORCE_SEED` auf `1` setzen, neu deployen, danach `FORCE_SEED` wieder entfernen.
+Der Seed setzt die Demo-Daten dann samt Passwörtern neu.
 
-**Die Seite ist da, aber es fehlen alle Zahlen**
-Ebenfalls der Seed aus Schritt 4.
+**Der Build läuft durch, dann `No Output Directory named "dist" found`**
+Vercel hält das Projekt nicht für eine Next.js-Anwendung. Das `vercel.json` im Repo setzt
+`"framework": "nextjs"` und sollte das verhindern. Falls es trotzdem auftritt:
+**Settings → Build & Deployment → Framework Preset** auf **Next.js** stellen und ein
+eventuell gesetztes **Output Directory** wieder leeren.
+
+> Tritt der Fehler bei einem **Redeploy** auf, prüfe im Log die Zeile `Cloning … (Commit: …)`.
+> „Redeploy" auf einem älteren Deployment baut auch den **alten** Commit — samt der Fehler,
+> die inzwischen behoben sind. Für den aktuellen Stand das neueste Deployment neu bauen
+> oder einfach einen neuen Commit pushen.
+
+**Der Build bricht ab mit `datasource.url property is required`**
+Die Datenbank ist noch nicht mit dem Projekt verbunden. Im Projekt unter **Storage** die
+Datenbank verbinden — danach steht `DATABASE_URL` und der nächste Build läuft.
+
+**Der Build bricht bei der Migration mit einem Lock-Fehler ab**
+Sollte nicht passieren: Migrationen laufen über `DATABASE_URL_UNPOOLED`, weil die
+gepoolte Verbindung die dafür nötigen Sperren nicht halten kann. Falls die Variable
+fehlt, in den Environment Variables nachtragen (die direkte Verbindung, ohne `-pooler`
+im Hostnamen).
 
 ---
 

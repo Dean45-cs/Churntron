@@ -78,6 +78,10 @@ Variable gesetzt ist, steht ein Hinweis „Demo · erfundene Daten" in der Topba
 
 ## Wenn etwas nicht klappt
 
+**Schnellster Weg: `/api/health` aufrufen** (lokal `http://localhost:3000/api/health`).
+Die Route sagt, welche Umgebungsvariablen gesetzt sind und ob die Datenbank antwortet —
+ausschließlich als Ja/Nein, nie die Werte selbst.
+
 **`Environment variable not found: DATABASE_URL`**
 Die `.env` fehlt oder ist leer. `cp .env.example .env` – und bei Weg B den
 Neon-String eintragen.

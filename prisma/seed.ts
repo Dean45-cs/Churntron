@@ -59,7 +59,12 @@ async function main() {
   // jeder Redeploy die Datenbank leerraeumen. Mit SEED_ONLY_IF_EMPTY=1 fuellt er
   // nur eine noch leere Datenbank – ein zweiter Aufruf tut dann nichts mehr.
   // Von Hand aufgerufen (npm run db:seed) setzt er weiterhin alles zurueck.
-  if (process.env.SEED_ONLY_IF_EMPTY === '1' && (await db.user.count()) > 0) {
+  //
+  // FORCE_SEED=1 uebergeht die Bremse. Gebraucht wird das, wenn DEMO_PASSWORD
+  // nachtraeglich geaendert wurde: die Passwoerter liegen gehasht in der
+  // Datenbank, ein neuer Wert passt sonst nicht mehr dazu.
+  const forceSeed = process.env.FORCE_SEED === '1'
+  if (!forceSeed && process.env.SEED_ONLY_IF_EMPTY === '1' && (await db.user.count()) > 0) {
     console.log('Datenbank ist bereits befuellt – Seed uebersprungen.')
     return
   }
