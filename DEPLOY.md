@@ -73,14 +73,13 @@ suchen.
 Die **Datenbank steht in Frankfurt** – das legst du in Schritt 1 fest und es gilt unabhängig
 vom Hosting.
 
-Die **Anwendung selbst** läuft dort, wo Vercel sie hinlegt; auf der kostenlosen Stufe ist das
-die Standardregion des Kontos (oft `iad1`, USA). Eine eigene Ausführungsregion zu erzwingen
-ist ein kostenpflichtiges Vercel-Feature – ein `vercel.json` mit `regions` lässt den Deploy
-auf der freien Stufe fehlschlagen, nachdem der Build bereits durchgelaufen ist.
+Die **Anwendung selbst** läuft in der Standardregion deines Vercel-Kontos. In der ersten
+Zeile jedes Build-Logs steht, welche das ist (z. B. `Running build in Washington, D.C. – iad1`).
+Eine eigene Ausführungsregion festzulegen, ist bei Vercel den bezahlten Stufen vorbehalten.
 
-Für diese Demo mit erfundenen Daten ist das ohne Belang. Für einen echten Einsatz ist es
-ein Argument mehr, das mit der TNG-IT zu klären – entweder eine bezahlte Stufe mit
-EU-Region oder gleich internes Hosting (siehe unten, es besteht keine Bindung an Vercel).
+Für diese Demo mit erfundenen Daten ist das ohne Belang. Für einen echten Einsatz ist es ein
+Argument mehr, das mit der TNG-IT zu klären – entweder eine bezahlte Stufe mit EU-Region oder
+gleich internes Hosting (siehe unten, es besteht keine Bindung an Vercel).
 
 ## 4. Fertig – öffnen und anmelden
 
@@ -102,6 +101,13 @@ Wert, den du als `DEMO_PASSWORD` gesetzt hast.
 ---
 
 ## Wenn etwas nicht klappt
+
+**Der Build läuft durch, dann `No Output Directory named "dist" found`**
+Vercel hält das Projekt nicht für eine Next.js-Anwendung und sucht nach dem falschen
+Ausgabeordner. Das `vercel.json` im Repo setzt `"framework": "nextjs"` und sollte das
+verhindern. Falls es trotzdem auftritt: **Settings → Build & Deployment → Framework
+Preset** auf **Next.js** stellen und ein eventuell gesetztes **Output Directory** wieder
+leeren.
 
 **Der Build bricht ab mit `datasource.url property is required`**
 `DATABASE_URL` fehlt in den Environment Variables oder wurde nur für eine Umgebung
