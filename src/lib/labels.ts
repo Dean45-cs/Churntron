@@ -6,6 +6,7 @@ import type {
   ContractStatus,
   ActivityType,
   ActivityOutcome,
+  Role,
 } from '@prisma/client'
 
 /**
@@ -13,6 +14,11 @@ import type {
  * Der Kuendigungsgrund-Katalog ist noch ein Vorschlag – er wird mit dem
  * Ausbilder gegen die echten Listen abgeglichen (siehe PLAN.md).
  */
+export const ROLE_LABEL: Record<Role, string> = {
+  REP: 'Vertrieb',
+  ADMIN: 'Ausbilder / Teamleitung',
+}
+
 export const CANCEL_REASON_LABEL: Record<CancelReason, string> = {
   PRICE: 'Preis',
   SERVICE: 'Service',

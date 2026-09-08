@@ -99,6 +99,22 @@ model User {
   teamId       String?
   team         Team?   @relation(fields: [teamId], references: [id])
 
+  /// Freiwillige Profilangaben. Das sind Beschaeftigtendaten und keine
+  /// Kundendaten – die Grundregel im Kopf dieser Datei bleibt unberuehrt.
+  /// Beides darf leer bleiben und laesst sich jederzeit wieder leeren.
+  jobTitle String?
+  about    String?
+
+  /// Wer das Haus verlaesst, wird deaktiviert und nicht geloescht: an den
+  /// Buchungen haengt die Abrechnung, und die muss nachvollziehbar bleiben.
+  active      Boolean   @default(true)
+  /// Nur der Zeitpunkt der letzten Anmeldung, damit Admins tote Konten finden.
+  /// Bewusst KEIN Verlauf – wer wann wie lange am Werkzeug sass, wird hier
+  /// nicht gespeichert (siehe DEPLOY.md, Mitbestimmung).
+  lastLoginAt DateTime?
+
+  avatar UserAvatar?
+
   contracts    Contract[]
   activities   ChurnActivity[]
   commissions  Commission[]
@@ -108,6 +124,29 @@ model User {
   imports      ImportBatch[]
 
   createdAt DateTime @default(now())
+}
+
+/// Das Profilbild, direkt in der Datenbank.
+///
+/// Eigene Tabelle und nicht ein Feld an User: die Bytes sollen nicht bei jeder
+/// Nutzerabfrage mitgelesen werden, gebraucht werden sie allein von der
+/// Bild-Route. Ein eigener Speicherdienst (S3, Vercel Blob) waere fuer ein
+/// Team dieser Groesse ein weiterer Anbieter samt Auftragsverarbeitung –
+/// nach dem Verkleinern im Browser sind es rund 30 KB je Person.
+model UserAvatar {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  data     Bytes
+  /// Aus den Magic Bytes bestimmt, nicht aus der Angabe des Browsers –
+  /// siehe src/lib/avatar.ts. Unter genau diesem Typ geht das Bild wieder raus.
+  mimeType String
+  /// Wechselt mit jedem neuen Bild und steht als Parameter in der Bild-URL.
+  /// Deshalb darf der Browser das Bild dauerhaft behalten und sieht trotzdem
+  /// sofort das neue.
+  version String
+
+  updatedAt DateTime @updatedAt
 }
 
 model Contract {
@@ -240,6 +279,10 @@ model CommissionPayout {
 model UserSettings {
   userId String @id
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Sekunden zwischen zwei stillen Aktualisierungen der Oberflaeche.
+  /// 0 schaltet sie ab. Siehe src/components/layout/auto-refresh.tsx.
+  autoRefreshSeconds Int @default(30)
 
   weeklyHours     Decimal @default(40) @db.Decimal(4, 1)
   workDaysPerWeek Int     @default(5)

@@ -2,8 +2,8 @@
 
 Internes Vertriebs-Tool der TNG. Drei Module: Churn-Leitfaden, Provisionen, Challenges.
 
-**Stand: Stage 1 (Grundgerüst) und Stage 4 (Provisions-Tracker) sind fertig.**
-Stage 2, 3 und 5 stehen aus.
+**Stand: Stage 1 (Grundgerüst), Stage 4 (Provisions-Tracker) und Stage 6
+(Konten und Profile) sind fertig.** Stage 2, 3 und 5 stehen aus.
 
 ---
 
@@ -48,6 +48,7 @@ Vollständig in `prisma/schema.prisma`. Kern:
 | Modell             | Zweck                                                                  |
 | ------------------ | ---------------------------------------------------------------------- |
 | `Team`, `User`     | Vertriebler und Ausbilder, Rollen `REP` / `ADMIN`                      |
+| `UserAvatar`       | Profilbild als BYTEA – eigene Tabelle, damit die Bytes nicht mitlesen  |
 | `Contract`         | Vertrag mit Status, Kündigungsgrund und Wiedervorlage-Termin           |
 | `ChurnActivity`    | Anrufe, Mails, Angebote je Vertrag                                     |
 | `CommissionRule`   | Provisionskatalog **als Daten**, nicht im Code                         |
@@ -139,6 +140,43 @@ und die automatische Clawback-Frist aus `CommissionRule.clawbackDays`.
 Anlege-Formular für Admins, funktionaler Zeitraumfilter im Leaderboard,
 automatische Punktevergabe beim Statuswechsel auf `WON_BACK`.
 
+### Stage 6 – Konten, Profile und stille Aktualisierung ✅ fertig
+
+- **Konto-Bereich** unter `/dashboard/konto`: Profilbild, Anzeigename, Funktion und
+  ein kurzer Text; Anzeige-Einstellungen; Passwort ändern mit Prüfung des alten.
+- **Nutzerverwaltung** für Admins: Konten anlegen, Rolle und Team setzen,
+  deaktivieren, Passwort zurücksetzen. Keine Selbstregistrierung – wer Zugang
+  bekommt, entscheidet die Teamleitung.
+- **Sitzung aus der Datenbank.** Das JWT trägt nur noch die ID. Vorher standen Name,
+  Rolle und Team im Token: eine Namensänderung wäre bis zum nächsten Anmelden
+  unsichtbar geblieben, und ein deaktiviertes Konto hätte weiterarbeiten können.
+- **Profilbild in Postgres.** Der Browser schneidet auf 256×256 zu (rund 30 KB), der
+  Server prüft Format und Größe an den Magic Bytes und liefert es unter
+  `/api/avatar/[userId]?v=…` nur an Angemeldete aus. Kein S3, kein Vercel Blob –
+  ein weiterer Anbieter samt Auftragsverarbeitung wäre für 30 Bilder unverhältnismäßig.
+
+**Was „live synchronisieren" hier heißt.** Die Daten waren nie getrennt: alle
+arbeiten auf derselben Datenbank. Gefehlt hat nur das Nachladen. Das macht jetzt
+`router.refresh()` im eingestellten Takt (Standard 30 s, abschaltbar), pausiert bei
+verstecktem Fenster.
+
+Echtes Push über SSE oder WebSockets wurde **bewusst nicht** gebaut. Auf Vercel ist
+jede offene Verbindung eine laufende Funktion mit Laufzeitdeckel, und zwischen den
+Instanzen gibt es keinen gemeinsamen Speicher: eine Buchung in Instanz 1 erreicht
+einen Stream in Instanz 2 nie. Es bräuchte einen Vermittler – Postgres
+`LISTEN/NOTIFY` (verträgt sich schlecht mit Neons Pooling) oder einen Dienst wie
+Upstash, Pusher, Ably. Damit stünden Auftragsverarbeitung und Drittlandtransfer ein
+zweites Mal auf der Liste, für einen Zugewinn von einer halben Minute.
+
+Auf einem internen TNG-Server ist dasselbe dagegen fast geschenkt: ein EventEmitter
+im Prozess, ein Tag Arbeit, kein Fremdanbieter. Die Entscheidung hängt also an
+offenem Punkt 7 (Hosting) und nicht am Code.
+
+Wo Live wirklich etwas wert wäre, ist ohnehin nicht der Tracker – dort bucht jeder
+für sich –, sondern **Stage 3**: verhindern, dass zwei Leute denselben gekündigten
+Kunden anrufen. Das löst eine Spalte (`claimedById`, `claimedAt`) plus die
+Aktualisierung von hier, keine WebSockets.
+
 ---
 
 ## 5. Fahrplan der drei Termine
@@ -172,4 +210,8 @@ offene Punkte für die Dynamics-Anbindung sammeln
 5. **Steuerwerte 2027** – die Tabelle in `src/lib/brutto-netto.ts` gilt für 2025 und 2026.
 6. **Punktelogik** – welche Aktivität zählt wie viel. Termin 3.
 7. **Hosting** – Vorgaben der TNG-IT (Vercel erlaubt, oder interner Server?).
+   Hängt jetzt auch an der Frage, ob echtes Push je gebaut wird (Stage 6).
 8. **Dynamics 365** – Zeitpunkt und Schnittstellen-Details des Custom-Builds.
+9. **Anwesenheit im Leaderboard?** Ein „Toni ist online"-Punkt wäre technisch klein,
+   aber Verhaltenskontrolle. Vor dem Bauen der Betriebsrat, nicht danach –
+   siehe DEPLOY.md. Bislang steht bewusst nur `lastLoginAt` in der Datenbank.

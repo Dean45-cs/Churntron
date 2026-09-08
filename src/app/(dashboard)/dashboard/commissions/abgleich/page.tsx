@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { auth } from '@/lib/auth'
+import { nutzerOderAnmeldung } from '@/lib/session'
 import { devDelay } from '@/lib/dev'
 import { getPeriodenGruppen, getPeriodenPositionen, getPeriodenStaende } from '@/lib/queries'
 import { AUSZAHLUNG_VERZUG_MONATE, STICHTAG } from '@/lib/period'
@@ -23,7 +23,7 @@ export default async function AbgleichPage({
 }: {
   searchParams: Promise<{ periode?: string }>
 }) {
-  const session = await auth()
+  const nutzer = await nutzerOderAnmeldung()
   const wunsch = (await searchParams).periode
 
   return (
@@ -46,12 +46,12 @@ export default async function AbgleichPage({
       </Card>
 
       <Suspense fallback={<TableSkeleton rows={6} widths={PERIODEN_WIDTHS} />}>
-        <PeriodenTabelle userId={session!.user.id} gewaehlt={wunsch} />
+        <PeriodenTabelle userId={nutzer.id} gewaehlt={wunsch} />
       </Suspense>
 
       <div className="mt-6">
         <Suspense key={wunsch ?? 'aktuell'} fallback={<AbgleichSkeleton />}>
-          <Detail userId={session!.user.id} gewaehlt={wunsch} />
+          <Detail userId={nutzer.id} gewaehlt={wunsch} />
         </Suspense>
       </div>
     </>

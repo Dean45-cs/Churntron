@@ -3,9 +3,12 @@
 Internes Vertriebs-Tool der TNG mit drei Modulen: **Churn-Leitfaden**,
 **Provisionen** und **Challenges**.
 
-Aktueller Stand: **Grundgerüst (Stage 1)** steht, und das **Provisionsmodul (Stage 4)**
-ist ausgebaut: selbst tracken per Tastendruck, Verdienst-Auswertung von der Stunde bis
-zum Jahr, Brutto-Netto-Rechner und der Abgleich mit der tatsächlichen Auszahlung.
+Aktueller Stand: **Grundgerüst (Stage 1)** steht, das **Provisionsmodul (Stage 4)**
+ist ausgebaut – selbst tracken per Tastendruck, Verdienst-Auswertung von der Stunde bis
+zum Jahr, Brutto-Netto-Rechner und der Abgleich mit der tatsächlichen Auszahlung –,
+und **Konten und Profile (Stage 6)** sind dazugekommen: Profilbild, eigene Angaben,
+Passwort ändern, Nutzerverwaltung für Admins und eine Oberfläche, die sich von allein
+aktuell hält.
 Import (Stage 2), Churn-Modul (Stage 3) und Challenges (Stage 5) folgen –
 siehe [PLAN.md](./PLAN.md).
 
@@ -65,6 +68,35 @@ npm run dev             # http://localhost:3000
 Passwort für beide: der Wert von `DEMO_PASSWORD` aus der `.env` (Standard: `churntron`).
 Als Admin sind zusätzlich die Team-Übersicht bei den Provisionen und der
 Verwaltungsbereich in der Navigation sichtbar.
+
+---
+
+## Konto und Profil
+
+Unter **Mein Konto** (oben rechts oder unten in der Navigation) stehen drei Reiter:
+
+- **Profil** – Profilbild, Anzeigename, Funktion und ein kurzer Text. Das Bild ist
+  freiwillig; ohne Bild stehen die Initialen im Kreis. Es wird im Browser auf
+  256×256 zugeschnitten (rund 30 KB) und liegt in der Datenbank – ohne
+  Speicherdienst und ohne weiteren Anbieter.
+- **Anzeige** – in welchem Takt sich die Seite von allein aktualisiert.
+- **Sicherheit** – Passwort ändern, mit Prüfung des bisherigen.
+
+Admins finden unter **Verwaltung → Nutzer** die Kontenliste: anlegen, Rolle und Team
+setzen, deaktivieren, Passwort zurücksetzen. **Es gibt keine Selbstregistrierung** –
+wer Zugang bekommt, entscheidet die Teamleitung. Und Konten werden **deaktiviert
+statt gelöscht**: an den Buchungen hängt die Abrechnung.
+
+### „Live" zwischen allen Nutzern
+
+Die Daten waren nie getrennt – alle arbeiten auf derselben Datenbank. Gefehlt hat nur
+das Nachladen. Die Oberfläche holt sich deshalb im eingestellten Takt (Standard 30 s)
+den aktuellen Stand vom Server. Was du gerade tippst, bleibt dabei stehen; im
+Hintergrund liegende Fenster fragen gar nicht erst nach.
+
+Echtes Push (WebSockets, SSE) ist bewusst nicht gebaut – warum, steht in
+[PLAN.md](./PLAN.md) unter Stage 6. Kurz: es bräuchte einen weiteren Dienst samt
+Auftragsverarbeitung, für einen Zugewinn von einer halben Minute.
 
 ---
 
@@ -152,7 +184,13 @@ läuft. Dessen Reporting-CSV ist die vorgesehene Schnittstelle nach Churntron �
 sie enthält bereits keine Adresse und keine E-Mail; Name und Rufnummer werden beim
 Import verworfen.
 
-Ein Test (`npm test`) prüft das Prisma-Schema gegen diese Zusage.
+**Von den eigenen Leuten steht auch nur das Nötige drin.** Ohne E-Mail keine
+Anmeldung, ohne Namen kein Leaderboard – aber keine Privatanschrift, keine Rufnummer,
+kein Geburtsdatum. Und **kein Anmeldeverlauf**: gespeichert wird der Zeitpunkt der
+letzten Anmeldung, damit Admins tote Konten finden, und sonst nichts. Eine Anzeige,
+wer gerade online ist, wäre Verhaltenskontrolle und ist deshalb nicht gebaut.
+
+Ein Test (`npm test`) prüft das Prisma-Schema gegen beide Zusagen.
 
 > Einordnung: Vertrags- und Kundennummern sind _pseudonyme_ personenbezogene Daten,
 > keine anonymen. Der Ansatz senkt das Risiko deutlich, macht das Tool aber nicht

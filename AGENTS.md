@@ -1,7 +1,8 @@
 # Churntron – Projektkonventionen
 
 Internes Vertriebs-Tool der TNG. Drei Module: Churn-Leitfaden, Provisionen, Challenges.
-Das Grundgerüst (Stage 1) steht, das Provisionsmodul (Stage 4) ist ausgebaut.
+Das Grundgerüst (Stage 1) steht, das Provisionsmodul (Stage 4) ist ausgebaut,
+Konten und Profile (Stage 6) ebenfalls.
 Import, Churn-Fachlogik und Challenges folgen (siehe `PLAN.md`).
 
 ## Die eine Regel, die nicht verhandelbar ist
@@ -15,6 +16,13 @@ das offline auf dem Rechner der Vertriebler läuft.
 `src/lib/__tests__/schema-privacy.test.ts` prüft das gegen `prisma/schema.prisma`.
 Wenn der Test rot wird, ist das kein Formfehler – dann wurde die Zusage gebrochen.
 
+**Von den eigenen Leuten steht auch nur das Nötige drin.** Seit es Profile gibt,
+prüft derselbe Test das Modell `User` mit: keine Privatanschrift, keine Rufnummer,
+kein Geburtsdatum, keine IBAN – und **kein Anmeldeverlauf**. Gespeichert wird der
+Zeitpunkt der letzten Anmeldung (`lastLoginAt`), damit Admins tote Konten finden,
+und sonst nichts. Provisionen und Leaderboard sind schon jetzt
+mitbestimmungspflichtige Leistungsdaten; eine Anwesenheitsliste kommt nicht dazu.
+
 ## Ordnerstruktur
 
 ```
@@ -22,18 +30,26 @@ src/
   app/
     (dashboard)/        Route-Gruppe mit Auth-Guard, Sidebar und Topbar
       dashboard/        Übersicht + die drei Module, je mit loading.tsx
+        konto/            eigenes Profil, Anzeige, Passwort
+        verwaltung/       nur für ADMIN: Nutzerverwaltung
     login/              Anmeldung (Server Action)
     api/auth/           NextAuth-Handler
+    api/avatar/         liefert Profilbilder aus (nur angemeldet)
   components/
     ui/                 Primitive: Card, Button, Badge, Skeleton, Progress
     skeletons/          Ladezustände – je ein Baustein pro wiederkehrendem Block
-    layout/             Sidebar, Topbar, Theme-Umschalter
+    layout/             Sidebar, Topbar, Theme-Umschalter, Auto-Refresh
+    avatar.tsx          Profilbild mit Initialen-Rückfall
   lib/
     db.ts               Prisma-Client (Driver-Adapter, Prisma 7)
     auth.ts             NextAuth mit Credentials-Provider
     auth.config.ts      edge-sicherer Teil für die Middleware
+    session.ts          angemeldeter Nutzer – frisch aus der DB, nicht aus dem JWT
+    actions.ts          ActionErgebnis, die Antwortform aller Server Actions
+    profil.ts           Regeln fürs eigene Konto (Namen, Passwort, Takt)
+    avatar.ts           was als Profilbild hereindarf – Prüfung ohne Datenbank
     queries/            ALLE Datenabfragen der Seiten
-      index.ts            Übersicht, Churn, Challenges – und re-exportiert:
+      index.ts            Konto, Verwaltung, Übersicht, Churn, Challenges – und:
       commissions.ts      das Provisionsmodul (eigene Datei wegen des Umfangs)
     commission-catalog.ts Provisionskatalog als Daten – Quelle für den Seed
     period.ts           Abrechnungsperioden 20. bis 20.
@@ -110,6 +126,38 @@ Gesetzgeber sie, und dann soll genau ein Block angefasst werden müssen. Die Tes
 prüfen ihn über seine Eigenschaften – Stetigkeit an den Zonengrenzen, Monotonie,
 Deckelung an den Beitragsbemessungsgrenzen –, nicht auf den Cent gegen eine
 Lohnabrechnung.
+
+## Konten, Profile und die stille Aktualisierung
+
+Vier Dinge sind hier nicht verhandelbar:
+
+1. **Im Sitzungstoken steht nur die ID.** Alles Veränderliche – Name, Rolle, Team,
+   Profilbild – kommt bei jeder Anfrage frisch aus der Datenbank, über
+   `aktuellerNutzer()` in `src/lib/session.ts`. Ein JWT wird beim Anmelden
+   geschrieben und danach nie wieder angefasst: wer seinen Namen ändert, sähe ihn
+   sonst bis zum nächsten Anmelden nicht, und ein deaktiviertes Konto könnte
+   weiterarbeiten, bis das Token abläuft. `cache()` aus React fasst die Aufrufe
+   einer Anfrage zusammen, es bleibt also bei einer Abfrage.
+2. **Jede Server Action prüft selbst.** `angemeldeterNutzer()` für eigene Daten,
+   `angemeldeterAdmin()` für die Verwaltung – und beide fragen die Datenbank, nicht
+   das Token. Actions sind über einen direkten POST erreichbar, nicht nur über die
+   eigene Oberfläche.
+3. **Was als Profilbild hereinkommt, bestimmen die Magic Bytes.** Nicht der Typ, den
+   der Browser behauptet – unter genau diesem Typ liefern wir die Datei ja wieder
+   aus. SVG ist ausgeschlossen: es darf Skripte tragen. Zugeschnitten und
+   verkleinert wird im Browser (256×256, rund 30 KB), gespeichert wird in
+   `UserAvatar` als BYTEA. Kein zusätzlicher Speicherdienst – das wäre ein weiterer
+   Anbieter samt Auftragsverarbeitung für 30 Bilder.
+4. **Konten werden deaktiviert, nicht gelöscht.** An den Buchungen hängt die
+   Abrechnung. `User.active` steuert Anmeldung _und_ laufende Sitzungen.
+
+Die Oberfläche hält sich über `router.refresh()` selbst aktuell
+(`src/components/layout/auto-refresh.tsx`) – im Takt, den der Nutzer im Konto
+einstellt, „aus" eingeschlossen, und nur solange das Fenster im Vordergrund ist.
+Bewusst kein Push über SSE oder WebSockets: dafür bräuchte es einen Vermittler
+zwischen den Server-Instanzen, auf Vercel also einen weiteren Dienst. Solange die
+Hosting-Frage offen ist (`PLAN.md`, offener Punkt 7), ist Nachfragen im Takt die
+ehrlichere Antwort.
 
 ## Design
 

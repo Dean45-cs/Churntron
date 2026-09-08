@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { auth } from '@/lib/auth'
+import { nutzerOderAnmeldung } from '@/lib/session'
 import { devDelay } from '@/lib/dev'
 import { getStatusStaende, getTeamProvisionen, getVerdienst } from '@/lib/queries'
 import { FENSTER_LABEL, type Fenster } from '@/lib/earnings'
@@ -26,8 +26,8 @@ export default async function VerdienstPage({
 }: {
   searchParams: Promise<{ fenster?: string }>
 }) {
-  const session = await auth()
-  const isAdmin = session?.user.role === 'ADMIN'
+  const nutzer = await nutzerOderAnmeldung()
+  const isAdmin = nutzer.role === 'ADMIN'
   const wunsch = (await searchParams).fenster
   const fenster: Fenster = FENSTER.includes(wunsch as Fenster) ? (wunsch as Fenster) : '90'
 
@@ -53,13 +53,13 @@ export default async function VerdienstPage({
       </div>
 
       <Suspense key={fenster} fallback={<VerdienstSkeleton />}>
-        <Auswertung userId={session!.user.id} fenster={fenster} />
+        <Auswertung userId={nutzer.id} fenster={fenster} />
       </Suspense>
 
       {/* Laedt fuer sich: die Statusuebersicht haengt nicht am Bezugszeitraum. */}
       <div className="mt-6">
         <Suspense fallback={<StatCardGridSkeleton />}>
-          <StatusUebersicht userId={session!.user.id} />
+          <StatusUebersicht userId={nutzer.id} />
         </Suspense>
       </div>
 

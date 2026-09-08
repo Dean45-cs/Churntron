@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { auth } from '@/lib/auth'
+import { nutzerOderAnmeldung } from '@/lib/session'
 import { devDelay } from '@/lib/dev'
 import { getArbeitsprofil, getTrackerStand } from '@/lib/queries'
 import { periodenName } from '@/lib/period'
@@ -12,11 +12,11 @@ import { RechnerForm } from './rechner-form'
  * startet und nicht bei null.
  */
 export default async function RechnerPage() {
-  const session = await auth()
+  const nutzer = await nutzerOderAnmeldung()
 
   return (
     <Suspense fallback={<RechnerSkeleton />}>
-      <Rechner userId={session!.user.id} />
+      <Rechner userId={nutzer.id} />
     </Suspense>
   )
 }

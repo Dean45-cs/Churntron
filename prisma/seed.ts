@@ -135,16 +135,57 @@ async function main() {
   const people: {
     email: string
     displayName: string
+    jobTitle: string
     role: Role
     teamId: string
   }[] = [
-    { email: 'admin@tng.de', displayName: 'Sam Ausbilder', role: Role.ADMIN, teamId: teamNord.id },
-    { email: 'rep@tng.de', displayName: 'Kevin (Azubi)', role: Role.REP, teamId: teamNord.id },
-    { email: 'jo@tng.de', displayName: 'Jo Berger', role: Role.REP, teamId: teamNord.id },
-    { email: 'mika@tng.de', displayName: 'Mika Falk', role: Role.REP, teamId: teamSued.id },
-    { email: 'toni@tng.de', displayName: 'Toni Kraus', role: Role.REP, teamId: teamSued.id },
-    { email: 'ren@tng.de', displayName: 'Ren Ahrens', role: Role.REP, teamId: teamSued.id },
+    {
+      email: 'admin@tng.de',
+      displayName: 'Sam Ausbilder',
+      jobTitle: 'Teamleitung Vertrieb',
+      role: Role.ADMIN,
+      teamId: teamNord.id,
+    },
+    {
+      email: 'rep@tng.de',
+      displayName: 'Kevin (Azubi)',
+      jobTitle: 'Auszubildender KDM',
+      role: Role.REP,
+      teamId: teamNord.id,
+    },
+    {
+      email: 'jo@tng.de',
+      displayName: 'Jo Berger',
+      jobTitle: 'Vertrieb Innendienst',
+      role: Role.REP,
+      teamId: teamNord.id,
+    },
+    {
+      email: 'mika@tng.de',
+      displayName: 'Mika Falk',
+      jobTitle: 'Vertrieb Innendienst',
+      role: Role.REP,
+      teamId: teamSued.id,
+    },
+    {
+      email: 'toni@tng.de',
+      displayName: 'Toni Kraus',
+      jobTitle: 'Vertrieb Aussendienst',
+      role: Role.REP,
+      teamId: teamSued.id,
+    },
+    {
+      email: 'ren@tng.de',
+      displayName: 'Ren Ahrens',
+      jobTitle: 'Vertrieb Innendienst',
+      role: Role.REP,
+      teamId: teamSued.id,
+    },
   ]
+  // Kein Profilbild im Seed: das laedt jede und jeder selbst hoch, und
+  // erfundene Portraets waeren das eine Stueck Demo-Daten, das nach echten
+  // Menschen aussieht.
+
   const users = []
   for (const p of people) {
     users.push(await db.user.create({ data: { ...p, passwordHash: password } }))
