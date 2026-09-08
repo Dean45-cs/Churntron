@@ -12,6 +12,7 @@ import {
   CommissionCategory,
   CommissionStatus,
   ChallengeMetric,
+  ObjectionCategory,
   SourceKind,
 } from '@prisma/client'
 import {
@@ -19,6 +20,7 @@ import {
   CATALOG_VALID_FROM,
   COMMISSION_CATALOG,
 } from '../src/lib/commission-catalog'
+import { OBJECTION_CATALOG } from '../src/lib/objection-catalog'
 import { periodeDavor, periodeVon, periodenZeitraum } from '../src/lib/period'
 
 const db = new PrismaClient({
@@ -90,10 +92,62 @@ async function katalogSchreiben() {
   console.log(`Provisionskatalog: ${COMMISSION_CATALOG.length} Saetze geschrieben.`)
 }
 
+/**
+ * Startbestand der Einwand-Wiki.
+ *
+ * Anders als der Provisionskatalog ist das keine Preisliste, sondern ein
+ * Anfang – die Wiki gehoert nach dem ersten Tag dem Team. Deshalb die
+ * Zwischenstufe: Fehlende Eintraege werden angelegt, und ein Starteintrag wird
+ * nur solange aufgefrischt, wie ihn niemand angefasst hat (`edited = false`).
+ * Sobald jemand ihn ueber die Oberflaeche ueberarbeitet, bleibt seine Fassung
+ * stehen, auch wenn der Katalog sich weiterentwickelt. „Hat geholfen" und das
+ * Archivieren zaehlen dabei nicht als Anfassen.
+ */
+async function wikiSchreiben() {
+  const vorhanden = new Set(
+    (await db.objection.findMany({ where: { key: { not: null } }, select: { key: true } })).map(
+      (e) => e.key,
+    ),
+  )
+
+  let angelegt = 0
+  let aufgefrischt = 0
+  for (const eintrag of OBJECTION_CATALOG) {
+    const daten = {
+      title: eintrag.title,
+      category: eintrag.category as ObjectionCategory,
+      variants: [...eintrag.variants],
+      answer: eintrag.answer,
+      followUp: eintrag.followUp ?? null,
+      tags: [...eintrag.tags],
+    }
+
+    if (!vorhanden.has(eintrag.key)) {
+      await db.objection.create({ data: { key: eintrag.key, ...daten } })
+      angelegt++
+      continue
+    }
+
+    const { count } = await db.objection.updateMany({
+      where: { key: eintrag.key, edited: false },
+      data: daten,
+    })
+    aufgefrischt += count
+  }
+
+  console.log(
+    `Einwand-Wiki: ${angelegt} neu, ${aufgefrischt} aufgefrischt, ` +
+      `${vorhanden.size - aufgefrischt} vom Team uebernommen.`,
+  )
+}
+
 async function main() {
   // Der Katalog ist keine Demo-Beilage, sondern die Preisliste – er wird immer
-  // aktualisiert, auch wenn die Bremse gleich abbricht.
+  // aktualisiert, auch wenn die Bremse gleich abbricht. Der Startbestand der
+  // Wiki laeuft aus demselben Grund hier oben mit: sonst stuende sie auf einer
+  // bereits befuellten Datenbank leer da.
   await katalogSchreiben()
+  await wikiSchreiben()
 
   // Beim Deployen laeuft der Seed bei JEDEM Build mit. Ohne diese Bremse wuerde
   // jeder Redeploy die Datenbank leerraeumen. Mit SEED_ONLY_IF_EMPTY=1 fuellt er
@@ -122,6 +176,9 @@ async function main() {
     where: { key: { notIn: COMMISSION_CATALOG.map((e) => e.key) } },
   })
   await db.challenge.deleteMany()
+  // Selbst angelegte Wiki-Eintraege sind Demo-Daten und fliegen raus. Der
+  // Startbestand (mit key) bleibt – er wurde eben erst sichergestellt.
+  await db.objection.deleteMany({ where: { key: null } })
   await db.userSettings.deleteMany()
   await db.user.deleteMany()
   await db.team.deleteMany()
@@ -525,6 +582,52 @@ async function main() {
     }
   }
 
+  // --- Einwand-Wiki: Spuren aus dem Alltag -------------------------------
+  // Der Startbestand steht schon (siehe wikiSchreiben). Hier kommt nur dazu,
+  // was im Betrieb entsteht: Rueckmeldungen aus Gespraechen und zwei Eintraege,
+  // die jemand selbst geschrieben hat.
+  const wikiEintraege = await db.objection.findMany({ select: { id: true } })
+  for (const eintrag of wikiEintraege) {
+    await db.objection.update({
+      where: { id: eintrag.id },
+      // Die meisten Eintraege werden ein paar Mal gebraucht, einzelne oft –
+      // damit die Sortierung "bewaehrte zuerst" in der Demo etwas zeigt.
+      data: { helpful: rnd() > 0.75 ? intBetween(9, 24) : intBetween(0, 6) },
+    })
+  }
+
+  const kevinWiki = users.find((u) => u.email === 'rep@tng.de')!
+  await db.objection.createMany({
+    data: [
+      {
+        title: 'Ich habe gerade erst verlängert',
+        category: ObjectionCategory.CONTRACT,
+        variants: [
+          'ich bin noch bis nächstes Jahr gebunden',
+          'der Vertrag läuft doch noch',
+          'da komme ich jetzt nicht raus',
+        ],
+        answer:
+          'Genau deshalb rufe ich an – solange der Vertrag läuft, haben wir Zeit und müssen nichts überstürzen.\nIch merke Ihren Anschluss für den Ausbau vor.\nRechtzeitig vor Ihrer Kündigungsfrist melde ich mich wieder.\nDann liegt alles bereit, und Sie verpassen die Frist nicht.',
+        followUp: 'Wann genau läuft Ihr Vertrag aus – wissen Sie das Datum?',
+        tags: ['Laufzeit', 'Wiedervorlage', 'Frist'],
+        helpful: 11,
+        authorId: kevinWiki.id,
+      },
+      {
+        title: 'Am Hörer klingt der Kunde genervt, bevor ich etwas sagen kann',
+        category: ObjectionCategory.OTHER,
+        variants: ['sofort patzig', 'was wollen Sie schon wieder', 'nicht schon wieder ein Anruf'],
+        answer:
+          'Ich höre, das ist heute nicht der erste Anruf – ich mache es kurz.\nNicht dagegenreden, sondern den Ton aufnehmen: Tempo raus, Stimme runter.\nDanach eine Frage stellen, die nichts verkauft.\nWer antwortet, hört auf sich zu wehren.',
+        followUp: 'Sagen Sie mir kurz: Läuft Ihr Anschluss gerade so, wie er soll?',
+        tags: ['Gesprächseinstieg', 'Ton', 'Deeskalation'],
+        helpful: 7,
+        authorId: kevinWiki.id,
+      },
+    ],
+  })
+
   const counts = {
     teams: await db.team.count(),
     users: await db.user.count(),
@@ -535,6 +638,7 @@ async function main() {
     payouts: await db.commissionPayout.count(),
     challenges: await db.challenge.count(),
     pointsEvents: await db.pointsEvent.count(),
+    objections: await db.objection.count(),
   }
   console.log(`Provisionsbuchungen im Tracker-Stil: ${gebucht}`)
   console.log('Seed fertig:', counts)

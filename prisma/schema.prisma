@@ -77,6 +77,22 @@ enum ChallengeMetric {
   POINTS
 }
 
+/// Themen der Einwand-Wiki. Sie tragen die Schnellfilter ueber der Suche und
+/// stehen an jedem Treffer, damit im Gespraech sofort klar ist, worum es geht.
+enum ObjectionCategory {
+  PRICE
+  COMPETITOR
+  TECHNICAL
+  CONSTRUCTION
+  SERVICE
+  TIMING
+  NEED
+  DECISION
+  CONTRACT
+  TRUST
+  OTHER
+}
+
 enum SourceKind {
   EXCEL
   LOOKUP_CSV
@@ -122,6 +138,7 @@ model User {
   settings     UserSettings?
   pointsEvents PointsEvent[]
   imports      ImportBatch[]
+  objections   Objection[]
 
   createdAt DateTime @default(now())
 }
@@ -333,6 +350,53 @@ model PointsEvent {
 
   @@index([userId, occurredAt])
   @@index([challengeId, occurredAt])
+}
+
+/// Ein Eintrag der Einwand-Wiki: der Einwand im Wortlaut des Kunden und die
+/// Antwort, die im Telefonat funktioniert.
+///
+/// Auch hier gilt die Grundregel: KEINE Klardaten. In der Wiki steht, WAS
+/// Kundinnen und Kunden sagen – nie, wer es gesagt hat. Ein Eintrag ist eine
+/// Formulierungshilfe, kein Gespraechsprotokoll, und haengt deshalb bewusst an
+/// keinem Vertrag.
+model Objection {
+  id String @id @default(cuid())
+  /// Stabiler Schluessel der Eintraege aus dem Startbestand
+  /// (src/lib/objection-catalog.ts). Selbst angelegte Eintraege haben keinen –
+  /// so weiss der Seed, was von ihm stammt, und laesst alles andere in Ruhe.
+  key String? @unique
+
+  title    String
+  category ObjectionCategory
+  /// Andere Formulierungen desselben Einwands. Sie sind das Herz der Suche:
+  /// getippt wird, was der Kunde gerade gesagt hat, nicht die Ueberschrift.
+  variants String[]
+  /// Die Einwandbehandlung – der Text, der im Gespraech gebraucht wird.
+  answer   String
+  /// Die Rueckfrage, die das Gespraech danach weitertraegt.
+  followUp String?
+  tags     String[]
+
+  /// Wie oft der Eintrag im Gespraech geholfen hat. Ordnet gleich gute Treffer:
+  /// was sich bewaehrt hat, steht oben.
+  helpful  Int     @default(0)
+  /// Ueberholte Eintraege verschwinden aus der Suche, statt geloescht zu werden –
+  /// eine Formulierung, die nicht mehr passt, ist trotzdem Teil der Geschichte.
+  archived Boolean @default(false)
+  /// Hat jemand den Text angefasst? Dann gehoert der Eintrag dem Team, und der
+  /// Seed laesst ihn in Ruhe. Solange das hier false ist, darf er einen
+  /// Starteintrag (mit `key`) aus dem Katalog auffrischen – nur so kommt eine
+  /// verbesserte Formulierung noch in eine bereits befuellte Datenbank.
+  /// „Hat geholfen" und das Archivieren zaehlen nicht als Anfassen.
+  edited   Boolean @default(false)
+
+  authorId String?
+  author   User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([archived, category])
 }
 
 model ImportBatch {

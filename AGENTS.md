@@ -1,9 +1,9 @@
 # Churntron – Projektkonventionen
 
-Internes Vertriebs-Tool der TNG. Drei Module: Churn-Leitfaden, Provisionen, Challenges.
-Das Grundgerüst (Stage 1) steht, das Provisionsmodul (Stage 4) ist ausgebaut,
-Konten und Profile (Stage 6) ebenfalls.
-Import, Churn-Fachlogik und Challenges folgen (siehe `PLAN.md`).
+Internes Vertriebs-Tool der TNG. Vier Module: Churn-Leitfaden, Einwand-Wiki,
+Provisionen, Challenges. Das Grundgerüst (Stage 1) steht, das Provisionsmodul (Stage 4)
+ist ausgebaut, die Einwand-Wiki (Stage 6) läuft und Konten samt Profilen (Stage 7)
+stehen. Import, Churn-Fachlogik und Challenges folgen (siehe `PLAN.md`).
 
 ## Die eine Regel, die nicht verhandelbar ist
 
@@ -15,6 +15,11 @@ das offline auf dem Rechner der Vertriebler läuft.
 
 `src/lib/__tests__/schema-privacy.test.ts` prüft das gegen `prisma/schema.prisma`.
 Wenn der Test rot wird, ist das kein Formfehler – dann wurde die Zusage gebrochen.
+
+Die Einwand-Wiki ist die einzige Stelle, an der jemand Freitext über einen Kunden
+eintippt. Dort greift zusätzlich `enthaeltKundendaten` in `src/lib/objection-input.ts`:
+Ziffernfolgen ab sechs Stellen und E-Mail-Adressen kommen nicht in die Datenbank. Wer
+dort ein Feld ergänzt, nimmt es in die Prüfschleife mit auf.
 
 **Von den eigenen Leuten steht auch nur das Nötige drin.** Seit es Profile gibt,
 prüft derselbe Test das Modell `User` mit: keine Privatanschrift, keine Rufnummer,
@@ -29,7 +34,7 @@ mitbestimmungspflichtige Leistungsdaten; eine Anwesenheitsliste kommt nicht dazu
 src/
   app/
     (dashboard)/        Route-Gruppe mit Auth-Guard, Sidebar und Topbar
-      dashboard/        Übersicht + die drei Module, je mit loading.tsx
+      dashboard/        Übersicht + die vier Module, je mit loading.tsx
         konto/            eigenes Profil, Anzeige, Passwort
         verwaltung/       nur für ADMIN: Nutzerverwaltung
     login/              Anmeldung (Server Action)
@@ -51,7 +56,12 @@ src/
     queries/            ALLE Datenabfragen der Seiten
       index.ts            Konto, Verwaltung, Übersicht, Churn, Challenges – und:
       commissions.ts      das Provisionsmodul (eigene Datei wegen des Umfangs)
+      objections.ts       die Einwand-Wiki
     commission-catalog.ts Provisionskatalog als Daten – Quelle für den Seed
+    objection-catalog.ts  Startbestand der Einwand-Wiki – Quelle für den Seed
+    objection-search.ts   die Suche der Wiki: Stammformen, Wortfelder, Tippfehler
+    objection-text.ts     Einstiegssatz und Punkte – wie ein Eintrag im Call gelesen wird
+    objection-input.ts    Prüfung der Wiki-Eingaben, inklusive Datenschutz-Sperre
     period.ts           Abrechnungsperioden 20. bis 20.
     time.ts             Tages-, Wochen- und Monatsgrenzen in Europe/Berlin
     earnings.ts         Verdienst-Auswertung (reine Rechnung, ohne Datenbank)
@@ -127,6 +137,36 @@ prüfen ihn über seine Eigenschaften – Stetigkeit an den Zonengrenzen, Monoto
 Deckelung an den Beitragsbemessungsgrenzen –, nicht auf den Cent gegen eine
 Lohnabrechnung.
 
+## Einwand-Wiki
+
+Drei Dinge tragen das Modul:
+
+1. **Die Suche läuft im Browser.** Gesucht wird während eines Telefonats – zwischen
+   Tastendruck und Treffer darf keine Netzrunde liegen. Der Bestand kommt einmal vom
+   Server, bewertet wird in `src/lib/objection-search.ts`, einer reinen Rechnung ohne
+   Datenbank. Ab ein paar hundert Einträgen wandert dieselbe Funktion in eine Server
+   Action oder in die Volltextsuche von Postgres; die Bewertung bleibt dieselbe.
+2. **Die Wortfelder sind Daten, kein Code.** Dass „zu teuer" auch die Einträge zu
+   Preiserhöhung und Rabatt findet, steht als Liste in `THEMEN`. Fehlt ein Wort, das im
+   Gespräch oft fällt, ist das eine Zeile – keine Fachlogik.
+3. **Ein Eintrag hat eine Form, und die kommt vom Autor.** Erste Zeile: der Satz, mit
+   dem es weitergeht. Danach ein Gedanke pro Zeile. Die Karte macht daraus drei
+   Schritte – _Jetzt sagen · Das zählt · Und dann fragen_ –, weil im Gespräch nicht
+   gelesen, sondern gesprochen wird. `zerlegeAntwort` in `src/lib/objection-text.ts`
+   erfindet dabei nichts: Wer einen Absatz eintippt, bekommt einen Absatz angezeigt.
+   Struktur, die niemand gemeint hat, wäre schlimmer als gar keine.
+4. **Der Startbestand gehört dem Team, sobald es ihn anfasst.** Der Provisionskatalog
+   ist eine Preisliste und wird bei jedem Seed überschrieben; die Wiki nicht. Der Seed
+   legt fehlende Einträge an (erkennbar am `key`) und frischt einen Starteintrag nur
+   auf, solange `edited` false ist. Die Server Action `einwandAendern` setzt das Flag –
+   ab dann bleibt die Fassung des Teams stehen, auch wenn der Katalog sich
+   weiterentwickelt. „Hat geholfen" und Archivieren zählen nicht als Anfassen. Selbst
+   angelegte Einträge haben keinen `key` und werden nie angerührt.
+
+Gelöscht wird nichts: `archived` blendet einen Eintrag aus der Suche aus, das Archiv
+holt ihn zurück. Und `helpful` ist kein Gefällt-mir, sondern die Sortierung bei gleich
+gutem Treffer.
+
 ## Konten, Profile und die stille Aktualisierung
 
 Vier Dinge sind hier nicht verhandelbar:
@@ -156,7 +196,7 @@ Die Oberfläche hält sich über `router.refresh()` selbst aktuell
 einstellt, „aus" eingeschlossen, und nur solange das Fenster im Vordergrund ist.
 Bewusst kein Push über SSE oder WebSockets: dafür bräuchte es einen Vermittler
 zwischen den Server-Instanzen, auf Vercel also einen weiteren Dienst. Solange die
-Hosting-Frage offen ist (`PLAN.md`, offener Punkt 7), ist Nachfragen im Takt die
+Hosting-Frage offen ist (`PLAN.md`, offener Punkt 8), ist Nachfragen im Takt die
 ehrlichere Antwort.
 
 ## Design

@@ -112,6 +112,21 @@ describe('Datenschutz: User traegt nur, was gebraucht wird', () => {
   })
 })
 
+describe('Datenschutz: die Einwand-Wiki sammelt Formulierungen, keine Faelle', () => {
+  const felder = fieldNames(modelBody('Objection')).map((f) => f.toLowerCase())
+
+  it.each(['contractid', 'externalref', 'customerref', 'name', 'phone', 'email'])(
+    'hat kein Feld "%s"',
+    (feld) => {
+      expect(felder).not.toContain(feld)
+    },
+  )
+
+  it('haengt an keinem Vertrag – ein Eintrag ist kein Gespraechsprotokoll', () => {
+    expect(modelBody('Objection')).not.toMatch(/Contract/)
+  })
+})
+
 describe('Datenmodell traegt die geplanten Bausteine', () => {
   it.each([
     'Team',
@@ -124,6 +139,7 @@ describe('Datenmodell traegt die geplanten Bausteine', () => {
     'Challenge',
     'PointsEvent',
     'ImportBatch',
+    'Objection',
   ])('kennt das Modell %s', (name) => {
     expect(() => modelBody(name)).not.toThrow()
   })
