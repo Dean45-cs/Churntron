@@ -16,6 +16,7 @@ import {
 import type { ObjectionCategory } from '@prisma/client'
 import type { WikiEintrag } from '@/lib/queries'
 import { indexieren, suchen } from '@/lib/objection-search'
+import { alsText, zerlegeAntwort } from '@/lib/objection-text'
 import { OBJECTION_CATEGORIES, OBJECTION_CATEGORY_LABEL } from '@/lib/labels'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
@@ -354,6 +355,15 @@ function Chip({
   )
 }
 
+/** Die Zwischenüberschrift eines Schritts – klein genug, um nicht zu stören. */
+function Schritt({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-muted-foreground mb-1.5 text-[0.7rem] font-semibold tracking-[0.08em] uppercase">
+      {children}
+    </p>
+  )
+}
+
 function EintragKarte({
   zeile,
   offen,
@@ -388,11 +398,13 @@ function EintragKarte({
     return <EinwandForm eintrag={eintrag} onFertig={gespeichert} onAbbrechen={abbrechen} />
   }
 
-  const volltext = eintrag.followUp ? `${eintrag.answer}\n\n${eintrag.followUp}` : eintrag.answer
+  // Der Einstiegssatz und die Punkte dahinter – siehe src/lib/objection-text.ts.
+  const { einstieg, punkte } = zerlegeAntwort(eintrag.answer)
+  const vorschau = einstieg ?? punkte[0] ?? ''
 
   async function kopieren() {
     try {
-      await navigator.clipboard.writeText(volltext)
+      await navigator.clipboard.writeText(alsText(eintrag))
       setKopiert(true)
       setTimeout(() => setKopiert(false), 2000)
     } catch {
@@ -410,7 +422,7 @@ function EintragKarte({
       >
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold">{eintrag.title}</span>
+            <span className="text-[0.975rem] leading-tight font-semibold">{eintrag.title}</span>
             <Badge variant="outline">{eintrag.kategorieLabel}</Badge>
             {eintrag.archived ? <Badge variant="destructive">Archiv</Badge> : null}
             {weitereThemen.length > 0 ? (
@@ -423,8 +435,10 @@ function EintragKarte({
             ) : null}
           </div>
 
+          {/* Zugeklappt steht hier der Einstiegssatz – der, mit dem es weitergeht,
+              und nicht der Anfang eines Absatzes. */}
           {!offen ? (
-            <p className="text-muted-foreground mt-1.5 line-clamp-2 text-sm">{eintrag.answer}</p>
+            <p className="text-muted-foreground mt-1.5 line-clamp-2 text-sm">{vorschau}</p>
           ) : null}
         </div>
 
@@ -438,16 +452,47 @@ function EintragKarte({
 
       {offen ? (
         <div className="border-border border-t px-6 py-5">
-          <p className="text-[0.95rem] leading-relaxed whitespace-pre-line">{eintrag.answer}</p>
+          {/* Drei Schritte, in der Reihenfolge des Gespraechs: sagen – belegen –
+              zurueckgeben. Die Zeilenlaenge ist begrenzt, weil das Auge sonst
+              beim Zeilensprung haengen bleibt. */}
+          <div className="flex max-w-[68ch] flex-col gap-4">
+            {einstieg ? (
+              <div>
+                <Schritt>Jetzt sagen</Schritt>
+                <p className="bg-secondary text-secondary-foreground rounded-xl px-4 py-3 text-[1.0625rem] leading-snug font-medium">
+                  &bdquo;{einstieg}&ldquo;
+                </p>
+              </div>
+            ) : null}
 
-          {eintrag.followUp ? (
-            <p className="bg-accent-subtle text-accent mt-4 rounded-xl px-4 py-3 text-sm font-medium">
-              {eintrag.followUp}
-            </p>
-          ) : null}
+            {punkte.length > 1 ? (
+              <div>
+                <Schritt>Das zählt</Schritt>
+                <ul className="flex flex-col gap-2.5">
+                  {punkte.map((punkt, i) => (
+                    <li key={i} className="flex gap-3 text-[0.95rem] leading-relaxed">
+                      <span className="bg-primary/50 mt-2.5 size-1.5 shrink-0 rounded-full" />
+                      <span>{punkt}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : punkte.length === 1 ? (
+              <p className="text-[0.95rem] leading-relaxed">{punkte[0]}</p>
+            ) : null}
+
+            {eintrag.followUp ? (
+              <div>
+                <Schritt>Und dann fragen</Schritt>
+                <p className="bg-accent-subtle text-accent rounded-xl px-4 py-3 text-[1.0625rem] leading-snug font-medium">
+                  &bdquo;{eintrag.followUp}&ldquo;
+                </p>
+              </div>
+            ) : null}
+          </div>
 
           {eintrag.variants.length > 0 ? (
-            <p className="text-muted-foreground mt-4 text-sm">
+            <p className="text-muted-foreground mt-5 text-sm">
               <span className="font-medium">Klingt auch so:</span>{' '}
               {eintrag.variants.map((v) => `„${v}“`).join(' · ')}
             </p>

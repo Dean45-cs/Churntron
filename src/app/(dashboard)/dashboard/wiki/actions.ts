@@ -55,6 +55,9 @@ export async function einwandAnlegen(formData: FormData): Promise<ActionErgebnis
 /**
  * Einen Eintrag ueberarbeiten. Der Schluessel aus dem Startbestand bleibt
  * unangetastet – er sagt nur, woher der Eintrag urspruenglich kam.
+ *
+ * `edited` wird gesetzt: ab jetzt gehoert der Text dem Team, und der Seed
+ * schreibt ihn nicht mehr aus dem Katalog nach.
  */
 export async function einwandAendern(id: string, formData: FormData): Promise<ActionErgebnis> {
   await angemeldet()
@@ -62,7 +65,10 @@ export async function einwandAendern(id: string, formData: FormData): Promise<Ac
   const geprueft = pruefeEinwand(rohwerte(formData))
   if (!geprueft.ok) return { ok: false, fehler: geprueft.fehler, feld: geprueft.feld }
 
-  const { count } = await db.objection.updateMany({ where: { id }, data: geprueft.wert })
+  const { count } = await db.objection.updateMany({
+    where: { id },
+    data: { ...geprueft.wert, edited: true },
+  })
   if (count === 0) return { ok: false, fehler: 'Eintrag nicht gefunden.' }
 
   revalidatePath(PFAD)

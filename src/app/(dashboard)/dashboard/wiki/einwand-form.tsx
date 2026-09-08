@@ -99,14 +99,19 @@ export function EinwandForm({
           />
         </Field>
 
-        <Field label="Die Einwandbehandlung" hint="Zeilenumbrüche bleiben erhalten.">
+        <Field
+          label="Die Einwandbehandlung"
+          hint="Erste Zeile: der Satz, mit dem es weitergeht. Danach ein Gedanke pro Zeile – im Gespräch wird nicht gelesen, sondern gesprochen."
+        >
           <Textarea
             name="answer"
             required
             rows={7}
             maxLength={4000}
             defaultValue={eintrag?.answer ?? ''}
-            placeholder="Anerkennen, einordnen, Nutzen zeigen – und mit einer Frage weitergeben."
+            placeholder={
+              'Verstehe ich – zu teuer verglichen womit?\nMeist ist der Vergleich der alte Vertrag.\nBei uns liegt die Faser bis in die Wohnung.'
+            }
           />
         </Field>
 

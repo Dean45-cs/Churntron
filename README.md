@@ -115,6 +115,25 @@ Gesammelte Einwandbehandlungen – auffindbar, während das Telefonat läuft. Ei
 besteht aus dem Einwand im Wortlaut des Kunden, anderen Formulierungen desselben
 Einwands, der Antwort und der Rückfrage, die das Gespräch weiterträgt.
 
+### Wie ein Eintrag im Gespräch aussieht
+
+Im Call wird nicht gelesen, sondern gesprochen. Deshalb steht eine Einwandbehandlung
+nicht als Absatz da, sondern als drei Schritte:
+
+| Schritt             | Was dort steht                                  |
+| ------------------- | ----------------------------------------------- |
+| **Jetzt sagen**     | Der Einstiegssatz, wörtlich – die erste Zeile   |
+| **Das zählt**       | Ein Gedanke pro Zeile, als Punkte untereinander |
+| **Und dann fragen** | Die Rückfrage, die das Gespräch zurückgibt      |
+
+Die Form kommt beim Schreiben: **erste Zeile = Einstiegssatz, danach ein Gedanke pro
+Zeile.** Zugeklappt zeigt eine Karte genau diesen Einstiegssatz – beim Überfliegen der
+Trefferliste sieht man also, was man sagen würde, nicht den Anfang eines Absatzes.
+
+Erfunden wird dabei nichts: Wer einen langen Absatz eintippt, bekommt einen Absatz
+angezeigt (`zerlegeAntwort` in `src/lib/objection-text.ts`). Struktur, die niemand
+gemeint hat, wäre im Gespräch schlimmer als gar keine.
+
 ### Die Suche
 
 Getippt wird, was der Kunde gerade gesagt hat. „zu teuer" findet deshalb nicht nur den
@@ -144,9 +163,12 @@ Admin. Gelöscht wird nichts: ein überholter Eintrag wandert ins Archiv und ble
 über den Archiv-Filter erreichbar. „Hat geholfen" ist kein Gefällt-mir, sondern die
 Sortierung – was im Gespräch getragen hat, steht bei gleich gutem Treffer oben.
 
-Der Startbestand steht in `src/lib/objection-catalog.ts`. Anders als der
-Provisionskatalog wird er **nicht** überschrieben: Der Seed legt fehlende Einträge an
-und lässt alles andere in Ruhe. Was das Team einmal umgeschrieben hat, bleibt so.
+Der Startbestand steht in `src/lib/objection-catalog.ts`. Anders als beim
+Provisionskatalog gilt hier: **Sobald jemand einen Eintrag überarbeitet, gehört er dem
+Team.** Der Seed legt fehlende Einträge an und frischt einen Starteintrag nur auf,
+solange ihn niemand angefasst hat – so kommt eine verbesserte Formulierung auch in eine
+Datenbank, die schon läuft, ohne je eine Änderung aus der Oberfläche zu überschreiben.
+„Hat geholfen" und Archivieren zählen nicht als Anfassen.
 
 > **Auch hier gilt: keine Klardaten.** In der Wiki steht, _was_ Kundinnen und Kunden
 > sagen – nie, wer es gesagt hat. Vertragsnummern, Kundennummern, Telefonnummern und

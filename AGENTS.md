@@ -43,8 +43,9 @@ src/
       commissions.ts      das Provisionsmodul (eigene Datei wegen des Umfangs)
       objections.ts       die Einwand-Wiki
     commission-catalog.ts Provisionskatalog als Daten – Quelle für den Seed
-    objection-catalog.ts  Startbestand der Einwand-Wiki – einmalig, nicht überschrieben
+    objection-catalog.ts  Startbestand der Einwand-Wiki – Quelle für den Seed
     objection-search.ts   die Suche der Wiki: Stammformen, Wortfelder, Tippfehler
+    objection-text.ts     Einstiegssatz und Punkte – wie ein Eintrag im Call gelesen wird
     objection-input.ts    Prüfung der Wiki-Eingaben, inklusive Datenschutz-Sperre
     period.ts           Abrechnungsperioden 20. bis 20.
     time.ts             Tages-, Wochen- und Monatsgrenzen in Europe/Berlin
@@ -133,10 +134,19 @@ Drei Dinge tragen das Modul:
 2. **Die Wortfelder sind Daten, kein Code.** Dass „zu teuer" auch die Einträge zu
    Preiserhöhung und Rabatt findet, steht als Liste in `THEMEN`. Fehlt ein Wort, das im
    Gespräch oft fällt, ist das eine Zeile – keine Fachlogik.
-3. **Der Startbestand wird nicht überschrieben.** Der Provisionskatalog ist eine
-   Preisliste und wird bei jedem Seed aktualisiert; die Wiki gehört nach dem ersten Tag
-   dem Team. Der Seed legt fehlende Einträge an (erkennbar am `key`) und fasst
-   vorhandene nie wieder an. Selbst angelegte Einträge haben keinen `key`.
+3. **Ein Eintrag hat eine Form, und die kommt vom Autor.** Erste Zeile: der Satz, mit
+   dem es weitergeht. Danach ein Gedanke pro Zeile. Die Karte macht daraus drei
+   Schritte – _Jetzt sagen · Das zählt · Und dann fragen_ –, weil im Gespräch nicht
+   gelesen, sondern gesprochen wird. `zerlegeAntwort` in `src/lib/objection-text.ts`
+   erfindet dabei nichts: Wer einen Absatz eintippt, bekommt einen Absatz angezeigt.
+   Struktur, die niemand gemeint hat, wäre schlimmer als gar keine.
+4. **Der Startbestand gehört dem Team, sobald es ihn anfasst.** Der Provisionskatalog
+   ist eine Preisliste und wird bei jedem Seed überschrieben; die Wiki nicht. Der Seed
+   legt fehlende Einträge an (erkennbar am `key`) und frischt einen Starteintrag nur
+   auf, solange `edited` false ist. Die Server Action `einwandAendern` setzt das Flag –
+   ab dann bleibt die Fassung des Teams stehen, auch wenn der Katalog sich
+   weiterentwickelt. „Hat geholfen" und Archivieren zählen nicht als Anfassen. Selbst
+   angelegte Einträge haben keinen `key` und werden nie angerührt.
 
 Gelöscht wird nichts: `archived` blendet einen Eintrag aus der Suche aus, das Archiv
 holt ihn zurück. Und `helpful` ist kein Gefällt-mir, sondern die Sortierung bei gleich

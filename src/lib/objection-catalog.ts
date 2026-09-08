@@ -59,7 +59,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'das ist mir zu viel',
     ],
     answer:
-      'Verstehe ich – über den Preis reden wir gleich. Vorher eine Frage: zu teuer verglichen womit?\nIn den meisten Fällen ist es der Vergleich mit dem alten Vertrag, und der lief über eine Leitung, die sich alle Nachbarn geteilt haben. Bei uns liegt die Faser bis in die Wohnung, die Bandbreite steht auch um 20 Uhr. Auf den Tag gerechnet reden wir über den Gegenwert eines Kaffees – bei einer Leitung, die die ganze Familie gleichzeitig nutzt.',
+      'Verstehe ich – über den Preis reden wir gleich. Vorher eine Frage: zu teuer verglichen womit?\nMeist ist der Vergleich der alte Vertrag – und der lief über eine Leitung, die sich alle Nachbarn geteilt haben.\nBei uns liegt die Faser bis in die Wohnung: Die Bandbreite steht auch um 20 Uhr.\nAuf den Tag gerechnet ist das der Gegenwert eines Kaffees – für eine Leitung, an der die ganze Familie gleichzeitig hängt.',
     followUp: 'Wenn der Preis passen würde – wäre der Rest für Sie in Ordnung?',
     tags: ['Preis', 'Budget', 'Vergleich', 'Nutzen'],
   },
@@ -75,7 +75,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'deswegen kündige ich',
     ],
     answer:
-      'Dass eine Erhöhung ärgert, wenn sich am Anschluss nichts ändert, kann ich gut nachvollziehen. Was sich verändert hat, ist der Ausbau dahinter: Kapazität, Technik, Entstörung.\nLassen Sie uns trotzdem auf Ihren konkreten Vertrag schauen – oft passt inzwischen ein anderer Tarif besser zu dem, was Sie tatsächlich nutzen, und der Wechsel kostet Sie nichts.',
+      'Dass eine Erhöhung ärgert, wenn sich am Anschluss nichts ändert, kann ich gut nachvollziehen.\nVerändert hat sich der Ausbau dahinter: Kapazität, Technik, Entstörung.\nWichtiger ist Ihr konkreter Vertrag – oft passt inzwischen ein anderer Tarif besser zu dem, was Sie wirklich nutzen.\nDer Wechsel in diesen Tarif kostet Sie nichts.',
     followUp: 'Darf ich Ihnen kurz zeigen, was Sie bei gleicher Leistung heute zahlen würden?',
     tags: ['Preis', 'Erhöhung', 'Kündigung', 'Tarifwechsel'],
   },
@@ -91,7 +91,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'nur wenn Sie mir entgegenkommen',
     ],
     answer:
-      'Ich verhandle den Preis nicht frei – was ich habe, sind die aktuellen Aktionen, und die gebe ich Ihnen gerne vollständig weiter. Wichtiger ist meist der passende Tarif: die häufigste Ersparnis entsteht nicht durch einen Nachlass, sondern dadurch, dass jemand für Bandbreite zahlt, die er nie braucht.',
+      'Den Preis verhandle ich nicht frei – aber die aktuellen Aktionen gebe ich Ihnen vollständig weiter.\nDie größere Ersparnis steckt meist woanders: im passenden Tarif.\nViele zahlen jeden Monat für Bandbreite, die sie nie brauchen.',
     followUp: 'Wie viele Geräte hängen bei Ihnen abends gleichzeitig am Netz?',
     tags: ['Preis', 'Rabatt', 'Aktion', 'Tarifwechsel'],
   },
@@ -108,7 +108,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'ich habe ein besseres Angebot',
     ],
     answer:
-      'Kann gut sein – der reine Monatspreis sagt aber wenig. Entscheidend sind drei Dinge: Was kostet es nach der Aktionszeit? Liegt Glasfaser bis in die Wohnung oder nur bis zum Verteiler? Und wer ist dran, wenn etwas ausfällt?\nWir sind hier vor Ort, die Technik ist unsere eigene, und der Preis nach der Aktion steht im Vertrag statt im Kleingedruckten.',
+      'Kann gut sein – nur sagt der reine Monatspreis wenig. Drei Fragen entscheiden.\nErstens: Was kostet es nach der Aktionszeit?\nZweitens: Liegt Glasfaser bis in die Wohnung oder nur bis zum Verteiler?\nDrittens: Wer ist dran, wenn etwas ausfällt? Wir sind hier vor Ort, die Technik ist unsere eigene.',
     followUp: 'Was steht bei dem Angebot ab dem 13. Monat?',
     tags: ['Wettbewerb', 'Preis', 'Vergleich', 'Aktionspreis'],
   },
@@ -123,7 +123,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'bin bei einem anderen unter Vertrag',
     ],
     answer:
-      'Gut – dann wissen Sie ja, worauf es ankommt. Ich will Ihnen auch nichts wegnehmen, was funktioniert. Der Punkt ist nur: Glasfaser wird hier einmal gebaut, und wer beim Ausbau dabei ist, bekommt den Hausanschluss zu Bedingungen, die es später so nicht mehr gibt.\nWir merken uns den Anschluss vor, und Sie entscheiden, wann Sie umsteigen.',
+      'Gut – dann wissen Sie ja, worauf es ankommt. Ich will Ihnen nichts wegnehmen, was funktioniert.\nDer Punkt ist ein anderer: Glasfaser wird hier einmal gebaut.\nWer beim Ausbau dabei ist, bekommt den Hausanschluss zu Bedingungen, die es später so nicht mehr gibt.\nWir merken den Anschluss vor – wann Sie umsteigen, entscheiden Sie.',
     followUp: 'Wann läuft Ihr jetziger Vertrag aus?',
     tags: ['Wettbewerb', 'Bestandskunde', 'Ausbau', 'Laufzeit'],
   },
@@ -138,7 +138,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'das mache ich mir nicht an',
     ],
     answer:
-      'Der Aufwand liegt bei uns, nicht bei Ihnen: Kündigung beim alten Anbieter, Terminabstimmung, Rufnummernmitnahme – das übernehmen wir. Gesetzlich darf Ihr Anschluss beim Wechsel maximal einen Tag ausfallen, in der Praxis läuft die Umschaltung meist am selben Vormittag.',
+      'Der Aufwand liegt bei uns, nicht bei Ihnen.\nKündigung beim alten Anbieter, Terminabstimmung, Rufnummernmitnahme – das übernehmen wir.\nGesetzlich darf Ihr Anschluss beim Wechsel höchstens einen Tag ausfallen.\nIn der Praxis läuft die Umschaltung meist am selben Vormittag.',
     followUp: 'Wenn ich Ihnen den Wechsel komplett abnehme – passt es dann?',
     tags: ['Wechsel', 'Aufwand', 'Anbieterwechsel', 'Ausfall'],
   },
@@ -156,7 +156,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'DSL reicht',
     ],
     answer:
-      'Heute stimmt das oft. Nur ist die Frage nicht, was Sie surfen, sondern wie viele Geräte gleichzeitig ziehen: Fernseher, zwei Handys, Homeoffice, dazu die Updates im Hintergrund. Genau dann bricht eine Kupferleitung ein – abends, wenn alle zu Hause sind.\nGlasfaser hält die Bandbreite auch dann, und der Anschluss ist die Grundlage für alles, was in fünf Jahren normal ist.',
+      'Heute stimmt das oft. Die Frage ist nur nicht, was Sie surfen – sondern wie viele Geräte gleichzeitig ziehen.\nFernseher, zwei Handys, Homeoffice, dazu die Updates im Hintergrund.\nGenau dann bricht eine Kupferleitung ein: abends, wenn alle zu Hause sind.\nGlasfaser hält die Bandbreite auch dann – und trägt alles, was in fünf Jahren normal ist.',
     followUp: 'Wie oft ruckelt es bei Ihnen abends beim Streamen?',
     tags: ['Bedarf', 'Bandbreite', 'Technik', 'Zukunft'],
   },
@@ -171,7 +171,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'ich zahle für 1000 und bekomme 200',
     ],
     answer:
-      'Das ist ein berechtigter Grund für Ärger, und dem gehen wir nach. Zwei Sachen trennen wir dabei: die Leitung bis zum Anschluss und alles, was danach im Haus passiert – WLAN, Router-Standort, alte Geräte.\nIch lasse die Leitung messen. Kommt die Bandbreite am Anschluss nicht an, ist das unser Fehler und wird behoben. Liegt es am WLAN, bekommen wir das mit dem richtigen Aufstellort meist im selben Gespräch in den Griff.',
+      'Das ist ein berechtigter Grund für Ärger, und dem gehen wir nach.\nZwei Dinge trennen wir dabei: die Leitung bis zum Anschluss – und alles, was danach im Haus passiert.\nIch lasse die Leitung messen. Kommt die Bandbreite am Anschluss nicht an, ist das unser Fehler und wird behoben.\nLiegt es am WLAN, bekommen wir das mit dem richtigen Router-Standort meist im selben Gespräch hin.',
     followUp: 'Hängt der Rechner per Kabel oder über WLAN am Router?',
     tags: ['Technik', 'Störung', 'Bandbreite', 'WLAN'],
   },
@@ -186,7 +186,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'immer wieder dasselbe Problem',
     ],
     answer:
-      'Das darf nicht passieren, und ich will es nicht kleinreden. Ich schaue jetzt in den Vorgang und sage Ihnen ehrlich, was ich sehe – auch wenn es nicht schmeichelhaft ist.\nAb hier haben Sie einen Namen: Ich bleibe an dem Fall und melde mich wieder, auch wenn es nichts Neues gibt.',
+      'Das darf nicht passieren, und ich rede es nicht klein.\nIch schaue jetzt in den Vorgang und sage Ihnen ehrlich, was ich sehe – auch wenn es nicht schmeichelhaft ist.\nAb hier haben Sie einen Namen: Ich bleibe an dem Fall.\nIch melde mich wieder, auch wenn es nichts Neues gibt.',
     followUp: 'Wann passt Ihnen ein Rückruf, wenn ich den Stand geklärt habe?',
     tags: ['Service', 'Störung', 'Eskalation', 'Vertrauen'],
   },
@@ -204,7 +204,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'ich will keine Löcher in der Wand',
     ],
     answer:
-      'Die Sorge höre ich oft, und sie ist berechtigt – es ist Ihr Grundstück. Deshalb: Die Trasse wird vorher mit Ihnen abgestimmt, meist über eine Spülbohrung ohne offenen Graben. Die Einführung ins Haus ist ein Kernloch von der Dicke eines Daumens, und alles wird fachgerecht wiederhergestellt. Der Rasen ist nach ein paar Wochen nicht mehr zu finden.',
+      'Die Sorge höre ich oft, und sie ist berechtigt – es ist Ihr Grundstück.\nDie Trasse stimmen wir vorher mit Ihnen ab, meist über eine Spülbohrung ohne offenen Graben.\nIns Haus geht es durch ein Kernloch von der Dicke eines Daumens.\nAlles wird fachgerecht wiederhergestellt – den Rasen finden Sie nach ein paar Wochen nicht mehr.',
     followUp: 'Wollen wir gemeinsam schauen, wo der Anschluss ins Haus kommen soll?',
     tags: ['Bau', 'Hausanschluss', 'Grundstück', 'Wiederherstellung'],
   },
@@ -219,7 +219,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'da darf ich nichts entscheiden',
     ],
     answer:
-      'Richtig, der Hausanschluss braucht die Zustimmung des Eigentümers – den Vertrag schließen aber Sie. Wir haben ein Standardformular für die Eigentümer, das nimmt der Hausverwaltung die Arbeit ab, und wir gehen direkt auf sie zu.\nSie verlieren nichts dabei: Ohne Zustimmung entsteht Ihnen kein Vertrag und keine Kosten.',
+      'Richtig, der Hausanschluss braucht die Zustimmung des Eigentümers – den Vertrag schließen aber Sie.\nFür die Eigentümer haben wir ein Standardformular, das der Hausverwaltung die Arbeit abnimmt.\nWir gehen direkt auf sie zu, das müssen Sie nicht übernehmen.\nOhne Zustimmung entsteht Ihnen kein Vertrag und keine Kosten – Sie verlieren nichts dabei.',
     followUp: 'Darf ich die Hausverwaltung selbst anschreiben – wie heißt sie?',
     tags: ['Vermieter', 'Mietwohnung', 'Zustimmung', 'Hausanschluss'],
   },
@@ -236,7 +236,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'unzufrieden mit dem Service',
     ],
     answer:
-      'Danke, dass Sie es überhaupt noch sagen – die meisten legen einfach auf. Ich kann das Vergangene nicht wegdiskutieren, und ich versuche es auch nicht.\nWas ich anbieten kann: Ich schaue mir an, was damals schiefgelaufen ist, sage Ihnen, was wir daraus geändert haben, und bleibe Ihr Ansprechpartner. Wenn Sie danach immer noch nein sagen, ist das in Ordnung.',
+      'Danke, dass Sie es überhaupt noch sagen – die meisten legen einfach auf.\nDas Vergangene kann ich nicht wegdiskutieren, und ich versuche es auch nicht.\nWas ich anbieten kann: Ich schaue nach, was damals schiefgelaufen ist, und sage Ihnen, was wir geändert haben.\nIch bleibe Ihr Ansprechpartner. Wenn Sie danach nein sagen, ist das in Ordnung.',
     followUp: 'Was müsste passieren, damit Sie uns noch einmal eine Chance geben?',
     tags: ['Service', 'Vertrauen', 'Beschwerde', 'Rückgewinnung'],
   },
@@ -246,7 +246,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
     category: 'SERVICE',
     variants: ['ewig in der Warteschleife', 'nie erreichbar', 'immer nur Band', 'keiner geht ran'],
     answer:
-      'Zu den Stoßzeiten stimmt das leider, und daran arbeiten wir. Für Sie ändert sich das jetzt konkret: Sie haben meine Durchwahl und meinen Namen, und was wir hier besprechen, dokumentiere ich im Vorgang – damit Sie es beim nächsten Anruf nicht wieder von vorne erzählen müssen.',
+      'Zu den Stoßzeiten stimmt das leider, und daran arbeiten wir.\nFür Sie ändert sich das jetzt konkret: Sie haben meinen Namen und meine Durchwahl.\nWas wir hier besprechen, dokumentiere ich im Vorgang.\nDann müssen Sie es beim nächsten Anruf nicht wieder von vorne erzählen.',
     followUp: 'Soll ich Ihnen meine Durchwahl durchgeben?',
     tags: ['Service', 'Erreichbarkeit', 'Hotline', 'Vertrauen'],
   },
@@ -264,7 +264,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'rufen Sie später an',
     ],
     answer:
-      'Kein Problem, ich halte Sie nicht auf. Zwei Sätze, dann wissen Sie, ob es sich für Sie überhaupt lohnt – und wenn nicht, sind wir in einer Minute durch.\nWenn es passt, machen wir einen festen Termin aus. Dann rufe ich an, wenn es Ihnen wirklich passt, statt Sie noch dreimal zu erwischen.',
+      'Kein Problem, ich halte Sie nicht auf. Zwei Sätze, dann wissen Sie, ob es sich für Sie lohnt.\nWenn nicht, sind wir in einer Minute durch.\nWenn doch, machen wir einen festen Termin aus.\nDann rufe ich an, wenn es Ihnen wirklich passt – statt Sie noch dreimal zu erwischen.',
     followUp: 'Passt Ihnen heute Abend besser oder morgen früh?',
     tags: ['Zeit', 'Rückruf', 'Termin', 'Gesprächseinstieg'],
   },
@@ -279,7 +279,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'ich melde mich selbst',
     ],
     answer:
-      'Gerne – erfahrungsgemäß geht es im Alltag unter, und das wäre schade, weil die Ausbaukonditionen an einen Zeitraum gebunden sind. Machen wir es andersherum: Ich rufe in zwei Wochen noch einmal an. Wenn Sie dann sagen, es ist erledigt, ist es erledigt und Sie hören nichts mehr von mir.',
+      'Gerne – erfahrungsgemäß geht es im Alltag unter, und das wäre schade.\nDie Ausbaukonditionen sind an einen Zeitraum gebunden.\nMachen wir es andersherum: Ich rufe in zwei Wochen noch einmal an.\nSagen Sie dann, es ist erledigt, ist es erledigt – und Sie hören nichts mehr von mir.',
     followUp: 'Zwei Wochen – oder ist Ihnen ein Monat lieber?',
     tags: ['Zeit', 'Wiedervorlage', 'Rückruf', 'Verbindlichkeit'],
   },
@@ -296,7 +296,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'lassen Sie es gut sein',
     ],
     answer:
-      'Alles gut – dann sage ich Ihnen in einem Satz, worum es geht, und Sie entscheiden.\nEs geht nicht um einen Vertrag heute, sondern darum, dass hier gerade Glasfaser gebaut wird. Wer beim Ausbau dabei ist, bekommt den Hausanschluss ohne die Kosten, die später anfallen. Das ist der ganze Grund für den Anruf.',
+      'Alles gut – ein Satz, worum es geht, dann entscheiden Sie.\nEs geht nicht um einen Vertrag heute, sondern darum, dass hier gerade Glasfaser gebaut wird.\nWer beim Ausbau dabei ist, bekommt den Hausanschluss ohne die Kosten, die später anfallen.\nDas ist der ganze Grund für den Anruf.',
     followUp: 'Wussten Sie überhaupt, dass bei Ihnen gebaut wird?',
     tags: ['Bedarf', 'Einstieg', 'Ausbau', 'Abwehr'],
   },
@@ -311,7 +311,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'das brauche ich nicht mehr',
     ],
     answer:
-      'Verstehe ich, und ich rede Ihnen nichts ein, was Sie nicht nutzen. Zwei Punkte, die trotzdem oft zählen: Das alte Kupfernetz wird nach und nach abgeschaltet – irgendwann ist es kein Wechsel mehr, sondern eine Umstellung unter Zeitdruck. Und wenn Kinder oder Enkel zu Besuch sind, hängt plötzlich das halbe Haus am Netz.\nDer Anschluss lässt sich auch legen, ohne dass sich für Sie heute etwas ändert.',
+      'Verstehe ich – ich rede Ihnen nichts ein, was Sie nicht nutzen.\nZwei Punkte zählen trotzdem oft. Der erste: Das alte Kupfernetz wird nach und nach abgeschaltet.\nIrgendwann ist es kein Wechsel mehr, sondern eine Umstellung unter Zeitdruck.\nDer zweite: Wenn Kinder oder Enkel zu Besuch sind, hängt plötzlich das halbe Haus am Netz.\nDer Anschluss lässt sich legen, ohne dass sich für Sie heute etwas ändert.',
     followUp: 'Telefonieren Sie noch über die Festnetzleitung?',
     tags: ['Bedarf', 'Kupferabschaltung', 'Zukunft', 'Senioren'],
   },
@@ -326,7 +326,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'ich schaue kaum fern',
     ],
     answer:
-      'Dann lassen wir es weg – ein Paket, das Sie nicht nutzen, ärgert Sie in drei Monaten. Interessant ist es nur in einem Fall: Wenn Sie ohnehin für Kabel-TV zahlen, ist das TV-Paket bei uns meist günstiger als das, was heute auf der Nebenkostenabrechnung steht.',
+      'Dann lassen wir es weg – ein Paket, das Sie nicht nutzen, ärgert Sie in drei Monaten.\nInteressant ist es nur in einem Fall: wenn Sie ohnehin für Kabel-TV zahlen.\nDann ist unser TV-Paket meist günstiger als das, was heute auf der Nebenkostenabrechnung steht.',
     followUp: 'Steht bei Ihnen Kabelfernsehen in den Nebenkosten?',
     tags: ['Zusatzprodukt', 'TV', 'Streaming', 'Bedarf'],
   },
@@ -343,7 +343,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'da rede ich erst mit meinem Partner',
     ],
     answer:
-      'Selbstverständlich, so eine Entscheidung trifft man gemeinsam. Damit Sie es nicht aus dem Kopf erzählen müssen, fasse ich Ihnen die zwei, drei Punkte zusammen, auf die es ankommt – Preis, Laufzeit, Termin.\nUnd damit die Frage nicht offenbleibt: Ich rufe übermorgen noch einmal an, wenn Sie beide Zeit hatten.',
+      'Selbstverständlich, so eine Entscheidung trifft man gemeinsam.\nDamit Sie es nicht aus dem Kopf erzählen müssen, fasse ich die drei Punkte zusammen: Preis, Laufzeit, Termin.\nUnd damit die Frage nicht offenbleibt: Ich rufe übermorgen noch einmal an, wenn Sie beide Zeit hatten.',
     followUp: 'Wann sind Sie beide zu Hause – eher abends?',
     tags: ['Entscheidung', 'Partner', 'Wiedervorlage', 'Zusammenfassung'],
   },
@@ -358,7 +358,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'das ist mir zu schnell',
     ],
     answer:
-      'Klar, überlegen Sie in Ruhe. Meistens steckt hinter dem Nachdenken aber ein konkreter Punkt – der Preis, die Laufzeit oder der Bau. Wenn ich weiß, welcher es ist, kann ich ihn Ihnen jetzt beantworten, statt dass Sie damit alleine sitzen.',
+      'Klar, überlegen Sie in Ruhe.\nMeistens steckt hinter dem Nachdenken aber ein konkreter Punkt: der Preis, die Laufzeit oder der Bau.\nWenn ich weiß, welcher es ist, beantworte ich ihn Ihnen jetzt – statt dass Sie damit alleine sitzen.',
     followUp: 'Was ist der Punkt, der Sie noch zögern lässt?',
     tags: ['Entscheidung', 'Bedenkzeit', 'Abschluss', 'Rückfrage'],
   },
@@ -375,7 +375,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'gibt es das auch monatlich kündbar',
     ],
     answer:
-      'Die Laufzeit ist der Grund, warum der Preis so ist, wie er ist – wir bauen für Sie einen Anschluss, der bleibt. Zwei Dinge nehmen der Bindung die Schärfe: Nach den 24 Monaten ist der Vertrag monatlich kündbar, und bei einem Umzug ziehen wir den Anschluss mit um, wenn wir dort ausgebaut haben.',
+      'Die Laufzeit ist der Grund, warum der Preis so ist, wie er ist – wir bauen Ihnen einen Anschluss, der bleibt.\nZwei Dinge nehmen der Bindung die Schärfe.\nNach den 24 Monaten ist der Vertrag monatlich kündbar.\nUnd bei einem Umzug ziehen wir den Anschluss mit um, wenn wir dort ausgebaut haben.',
     followUp: 'Planen Sie in den nächsten zwei Jahren einen Umzug?',
     tags: ['Vertrag', 'Laufzeit', 'Bindung', 'Umzug'],
   },
@@ -390,7 +390,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'ich brauche den Anschluss dort nicht mehr',
     ],
     answer:
-      'Dann prüfen wir zuerst, ob wir an der neuen Adresse ausgebaut haben – in dem Fall nehmen Sie Vertrag und Rufnummer einfach mit, ohne neue Laufzeit.\nWenn dort noch nicht gebaut ist, ist die Kündigung sauber und wir merken die Adresse für den Ausbau vor. Beides ist besser als ein Vertrag, der ins Leere läuft.',
+      'Dann prüfen wir zuerst, ob wir an der neuen Adresse ausgebaut haben.\nWenn ja, nehmen Sie Vertrag und Rufnummer einfach mit – ohne neue Laufzeit.\nWenn nicht, ist die Kündigung sauber und wir merken die Adresse für den Ausbau vor.\nBeides ist besser als ein Vertrag, der ins Leere läuft.',
     followUp: 'Wie lautet die neue Adresse – ich schaue direkt nach?',
     tags: ['Umzug', 'Kündigung', 'Mitnahme', 'Ausbaugebiet'],
   },
@@ -405,7 +405,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'ich habe mich überrumpeln lassen',
     ],
     answer:
-      'Ihr Widerruf gilt, daran rüttle ich nicht – das ist Ihr gutes Recht und dafür ist die Frist da. Mich interessiert nur der Grund: War es die Art, wie der Vertrag zustande kam, oder passt der Vertrag selbst nicht?\nBeim ersten Punkt möchte ich mich entschuldigen. Beim zweiten finden wir vielleicht etwas, das passt.',
+      'Ihr Widerruf gilt, daran rüttle ich nicht – dafür ist die Frist da.\nMich interessiert nur der Grund: die Art, wie der Vertrag zustande kam, oder der Vertrag selbst?\nWar es die Situation, möchte ich mich dafür entschuldigen.\nWar es der Vertrag, finden wir vielleicht etwas, das besser passt.',
     followUp: 'Was war es bei Ihnen – die Situation oder der Vertrag?',
     tags: ['Widerruf', 'Vertrag', 'Rückgewinnung', 'Vertrauen'],
   },
@@ -422,7 +422,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'ich will das schwarz auf weiß',
     ],
     answer:
-      'Mache ich gerne – schriftlich haben Sie es ohnehin, bevor irgendetwas gilt. Nur bringt Ihnen ein Prospekt wenig, wenn darin nicht steht, was für Ihre Adresse gilt. Deshalb klären wir die zwei Punkte jetzt kurz, und dann schicke ich Ihnen genau das zu, was auf Sie passt.',
+      'Mache ich gerne – schriftlich haben Sie es ohnehin, bevor irgendetwas gilt.\nNur bringt Ihnen ein Prospekt wenig, wenn nicht drinsteht, was für Ihre Adresse gilt.\nDeshalb klären wir die zwei Punkte jetzt kurz.\nDann schicke ich Ihnen genau das zu, was auf Sie passt.',
     followUp: 'An welche Adresse darf ich es schicken?',
     tags: ['Unterlagen', 'Schriftlich', 'Vertrauen', 'Hinhalten'],
   },
@@ -437,7 +437,7 @@ export const OBJECTION_CATALOG: readonly ObjectionTemplate[] = [
       'löschen Sie meine Daten',
     ],
     answer:
-      'Berechtigte Frage. Ich rufe Sie an, weil Sie bei uns Kunde sind beziehungsweise Ihrem Anschluss ein laufender Vorgang zugeordnet ist – die Nummer stammt aus Ihren Vertragsdaten, nicht aus einer gekauften Liste.\nWenn Sie keine Anrufe wünschen, vermerke ich das sofort, und dann ruft hier niemand mehr an.',
+      'Berechtigte Frage. Sie sind bei uns Kunde, beziehungsweise Ihrem Anschluss ist ein laufender Vorgang zugeordnet.\nDie Nummer stammt aus Ihren Vertragsdaten, nicht aus einer gekauften Liste.\nWenn Sie keine Anrufe wünschen, vermerke ich das sofort.\nDann ruft hier niemand mehr an.',
     followUp: 'Soll ich den Werbekontakt für Sie sperren?',
     tags: ['Datenschutz', 'Werbeanruf', 'Vertrauen', 'Widerspruch'],
   },

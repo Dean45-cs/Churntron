@@ -340,6 +340,12 @@ model Objection {
   /// Ueberholte Eintraege verschwinden aus der Suche, statt geloescht zu werden –
   /// eine Formulierung, die nicht mehr passt, ist trotzdem Teil der Geschichte.
   archived Boolean @default(false)
+  /// Hat jemand den Text angefasst? Dann gehoert der Eintrag dem Team, und der
+  /// Seed laesst ihn in Ruhe. Solange das hier false ist, darf er einen
+  /// Starteintrag (mit `key`) aus dem Katalog auffrischen – nur so kommt eine
+  /// verbesserte Formulierung noch in eine bereits befuellte Datenbank.
+  /// „Hat geholfen" und das Archivieren zaehlen nicht als Anfassen.
+  edited   Boolean @default(false)
 
   authorId String?
   author   User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)

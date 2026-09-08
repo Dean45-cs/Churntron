@@ -93,10 +93,15 @@ async function katalogSchreiben() {
 }
 
 /**
- * Startbestand der Einwand-Wiki. Anders als beim Provisionskatalog wird hier
- * NICHT aktualisiert: die Wiki gehoert nach dem ersten Tag dem Team. Ein
- * Eintrag entsteht genau einmal – wer ihn danach umschreibt, behaelt seine
- * Fassung, auch wenn der Seed noch einmal laeuft.
+ * Startbestand der Einwand-Wiki.
+ *
+ * Anders als der Provisionskatalog ist das keine Preisliste, sondern ein
+ * Anfang – die Wiki gehoert nach dem ersten Tag dem Team. Deshalb die
+ * Zwischenstufe: Fehlende Eintraege werden angelegt, und ein Starteintrag wird
+ * nur solange aufgefrischt, wie ihn niemand angefasst hat (`edited = false`).
+ * Sobald jemand ihn ueber die Oberflaeche ueberarbeitet, bleibt seine Fassung
+ * stehen, auch wenn der Katalog sich weiterentwickelt. „Hat geholfen" und das
+ * Archivieren zaehlen dabei nicht als Anfassen.
  */
 async function wikiSchreiben() {
   const vorhanden = new Set(
@@ -104,23 +109,35 @@ async function wikiSchreiben() {
       (e) => e.key,
     ),
   )
-  const fehlende = OBJECTION_CATALOG.filter((e) => !vorhanden.has(e.key))
 
-  for (const eintrag of fehlende) {
-    await db.objection.create({
-      data: {
-        key: eintrag.key,
-        title: eintrag.title,
-        category: eintrag.category as ObjectionCategory,
-        variants: [...eintrag.variants],
-        answer: eintrag.answer,
-        followUp: eintrag.followUp ?? null,
-        tags: [...eintrag.tags],
-      },
+  let angelegt = 0
+  let aufgefrischt = 0
+  for (const eintrag of OBJECTION_CATALOG) {
+    const daten = {
+      title: eintrag.title,
+      category: eintrag.category as ObjectionCategory,
+      variants: [...eintrag.variants],
+      answer: eintrag.answer,
+      followUp: eintrag.followUp ?? null,
+      tags: [...eintrag.tags],
+    }
+
+    if (!vorhanden.has(eintrag.key)) {
+      await db.objection.create({ data: { key: eintrag.key, ...daten } })
+      angelegt++
+      continue
+    }
+
+    const { count } = await db.objection.updateMany({
+      where: { key: eintrag.key, edited: false },
+      data: daten,
     })
+    aufgefrischt += count
   }
+
   console.log(
-    `Einwand-Wiki: ${fehlende.length} neue Eintraege, ${vorhanden.size} bereits vorhanden.`,
+    `Einwand-Wiki: ${angelegt} neu, ${aufgefrischt} aufgefrischt, ` +
+      `${vorhanden.size - aufgefrischt} vom Team uebernommen.`,
   )
 }
 
@@ -550,7 +567,7 @@ async function main() {
           'da komme ich jetzt nicht raus',
         ],
         answer:
-          'Genau deshalb rufe ich an – solange der Vertrag läuft, haben wir Zeit und müssen nichts überstürzen.\nIch merke Ihren Anschluss für den Ausbau vor und melde mich rechtzeitig vor Ihrer Kündigungsfrist. Dann liegt alles bereit, und Sie verpassen die Frist nicht.',
+          'Genau deshalb rufe ich an – solange der Vertrag läuft, haben wir Zeit und müssen nichts überstürzen.\nIch merke Ihren Anschluss für den Ausbau vor.\nRechtzeitig vor Ihrer Kündigungsfrist melde ich mich wieder.\nDann liegt alles bereit, und Sie verpassen die Frist nicht.',
         followUp: 'Wann genau läuft Ihr Vertrag aus – wissen Sie das Datum?',
         tags: ['Laufzeit', 'Wiedervorlage', 'Frist'],
         helpful: 11,
@@ -561,7 +578,7 @@ async function main() {
         category: ObjectionCategory.OTHER,
         variants: ['sofort patzig', 'was wollen Sie schon wieder', 'nicht schon wieder ein Anruf'],
         answer:
-          'Nicht dagegenreden, sondern den Ton aufnehmen: „Ich höre, das ist heute nicht der erste Anruf – ich mache es kurz."\nDanach eine Frage stellen, die nichts verkauft. Wer antwortet, hört auf zu wehren.',
+          'Ich höre, das ist heute nicht der erste Anruf – ich mache es kurz.\nNicht dagegenreden, sondern den Ton aufnehmen: Tempo raus, Stimme runter.\nDanach eine Frage stellen, die nichts verkauft.\nWer antwortet, hört auf sich zu wehren.',
         followUp: 'Sagen Sie mir kurz: Läuft Ihr Anschluss gerade so, wie er soll?',
         tags: ['Gesprächseinstieg', 'Ton', 'Deeskalation'],
         helpful: 7,

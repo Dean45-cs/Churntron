@@ -153,9 +153,14 @@ fehlen sie genau dann, wenn sie gebraucht werden.
   Reine Rechnung in `src/lib/objection-search.ts`, im Browser ausgeführt.
 - **Zweigeteilte Trefferliste.** Oben, was den Einwand selbst trifft; darunter, was nur
   im Antworttext vorkommt.
+- **Drei Schritte statt Fließtext.** Ein Eintrag zeigt _Jetzt sagen · Das zählt · Und
+  dann fragen_ – im Gespräch wird nicht gelesen, sondern gesprochen. Die Form kommt vom
+  Autor (erste Zeile = Einstiegssatz, danach ein Gedanke pro Zeile); wer einen Absatz
+  tippt, bekommt einen Absatz.
 - **Pflege in der Oberfläche.** Anlegen, überarbeiten, archivieren – ohne Umweg über
   einen Admin und ohne Code-Änderung. Der Startbestand (24 Einträge) steht in
-  `src/lib/objection-catalog.ts` und wird vom Seed nur ergänzt, nie überschrieben.
+  `src/lib/objection-catalog.ts`. Der Seed ergänzt fehlende Einträge und frischt einen
+  Starteintrag auf, solange ihn niemand überarbeitet hat – danach gehört er dem Team.
 - **Datenschutz an der Eingabe.** Die erste Stelle im Projekt, an der Freitext von Hand
   in die Datenbank kommt: Ziffernfolgen ab sechs Stellen und E-Mail-Adressen werden
   abgewiesen.
