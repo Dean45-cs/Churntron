@@ -1,6 +1,7 @@
 import type {
   CancelReason,
   ChallengeMetric,
+  CommissionCategory,
   CommissionStatus,
   ContractStatus,
   ActivityType,
@@ -36,6 +37,24 @@ export const COMMISSION_STATUS_LABEL: Record<CommissionStatus, string> = {
   APPROVED: 'Genehmigt',
   PAID: 'Ausgezahlt',
   CLAWBACK: 'Storno',
+}
+
+/** Abschnitte des Provisionskatalogs, in der Sprache des Katalogs. */
+export const COMMISSION_CATEGORY_LABEL: Record<CommissionCategory, string> = {
+  CAMPAIGN: 'Vertragsnachbearbeitung',
+  SALE_PRIVATE: 'Vertragsabschluss Privat',
+  SALE_BUSINESS: 'Vertragsabschluss Business',
+  ADDON: 'Zusatzprodukte',
+  TARIFF_CHANGE: 'Tarifwechsel',
+}
+
+/** Kurzform fuer Reiter und Balkenbeschriftung. */
+export const COMMISSION_CATEGORY_SHORT: Record<CommissionCategory, string> = {
+  CAMPAIGN: 'Kampagnen',
+  SALE_PRIVATE: 'Privat',
+  SALE_BUSINESS: 'Business',
+  ADDON: 'Zusatz',
+  TARIFF_CHANGE: 'Tarifwechsel',
 }
 
 export const CHALLENGE_METRIC_LABEL: Record<ChallengeMetric, string> = {

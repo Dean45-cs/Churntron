@@ -1,6 +1,6 @@
 /**
- * Sichtpruefung: meldet sich an und legt Screenshots aller vier Seiten in hell
- * und dunkel ab – jeweils im Skeleton-Zustand und fertig geladen.
+ * Sichtpruefung: meldet sich an und legt Screenshots aller Seiten in hell und
+ * dunkel ab – jeweils im Skeleton-Zustand und fertig geladen.
  *
  *   npm run dev:skeletons          # in einem zweiten Terminal
  *   SHOT_DIR=./screenshots node scripts/screenshots.mjs
@@ -16,6 +16,10 @@ const PAGES = [
   ['dashboard', '/dashboard'],
   ['churn', '/dashboard/churn'],
   ['commissions', '/dashboard/commissions'],
+  ['commissions-verdienst', '/dashboard/commissions/verdienst'],
+  ['commissions-rechner', '/dashboard/commissions/rechner'],
+  ['commissions-abgleich', '/dashboard/commissions/abgleich'],
+  ['commissions-katalog', '/dashboard/commissions/katalog'],
   ['challenges', '/dashboard/challenges'],
 ]
 

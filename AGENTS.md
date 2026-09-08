@@ -1,8 +1,8 @@
 # Churntron – Projektkonventionen
 
 Internes Vertriebs-Tool der TNG. Drei Module: Churn-Leitfaden, Provisionen, Challenges.
-Der aktuelle Stand ist das Grundgerüst (Stage 1) – die Module sind angelegt und mit
-echten Daten befüllt, die Fachlogik folgt in Stage 2–5 (siehe `PLAN.md`).
+Das Grundgerüst (Stage 1) steht, das Provisionsmodul (Stage 4) ist ausgebaut.
+Import, Churn-Fachlogik und Challenges folgen (siehe `PLAN.md`).
 
 ## Die eine Regel, die nicht verhandelbar ist
 
@@ -32,11 +32,21 @@ src/
     db.ts               Prisma-Client (Driver-Adapter, Prisma 7)
     auth.ts             NextAuth mit Credentials-Provider
     auth.config.ts      edge-sicherer Teil für die Middleware
-    queries.ts          ALLE Datenabfragen der Seiten
+    queries/            ALLE Datenabfragen der Seiten
+      index.ts            Übersicht, Churn, Challenges – und re-exportiert:
+      commissions.ts      das Provisionsmodul (eigene Datei wegen des Umfangs)
+    commission-catalog.ts Provisionskatalog als Daten – Quelle für den Seed
+    period.ts           Abrechnungsperioden 20. bis 20.
+    time.ts             Tages-, Wochen- und Monatsgrenzen in Europe/Berlin
+    earnings.ts         Verdienst-Auswertung (reine Rechnung, ohne Datenbank)
+    brutto-netto.ts     Lohnsteuer, Soli, Sozialabgaben – reine Rechnung
     labels.ts           deutsche Beschriftungen der Enum-Werte
-    utils.ts            cn, formatEuro, formatDate, initials
+    utils.ts            cn, formatEuro, formatDate, initials, Eingabe-Parser
     dev.ts              devDelay für die Skeleton-Demo
 ```
+
+Seiten importieren weiterhin aus `@/lib/queries` – die Aufteilung in zwei Dateien
+sieht man von außen nicht.
 
 ## Server und Client
 
@@ -74,6 +84,33 @@ Demo soll genau diese Ladezustände zeigen. Damit die Bremse nicht für echtes V
 gehalten wird, trägt die Topbar dann den Hinweis „Demo · erfundene Daten". In einer
 produktiven Umgebung mit echten Daten wird die Variable nicht gesetzt (siehe `DEPLOY.md`).
 
+## Provisionen
+
+Drei Dinge sind hier nicht verhandelbar:
+
+1. **Der Betrag kommt aus dem Katalog, nie aus dem Formular.** Die Server Action
+   schlägt die Regel über ihren `key` nach und nimmt deren `amountCents`. Was eine
+   Leistung wert ist, entscheidet die Preisliste – nicht der Browser.
+2. **Eine Periode läuft vom 20. bis zum 20.** Der Stichtag und der Auszahlungsverzug
+   stehen als Konstante in `src/lib/period.ts` und sonst nirgends. `periodMonth` einer
+   Buchung wird immer aus `occurredAt` über `periodeVon()` abgeleitet.
+3. **Tages- und Wochengrenzen laufen über `src/lib/time.ts`, nie über die Serverzeit.**
+   Der Server läuft in UTC, gearbeitet wird in Deutschland. Eine Buchung um 00:30 Uhr
+   würde sonst auf den Vortag rutschen – und „was habe ich heute verdient" ist genau
+   die Frage, um die es geht. Auch `formatDate` trägt deshalb `timeZone: 'Europe/Berlin'`.
+
+Beträge stehen überall in **Cent** und werden erst zur Anzeige über `formatEuro`
+umgerechnet – mit zwei Nachkommastellen, weil der Katalog Sätze wie 6,50 € und 1,00 €
+kennt. Bei 137 Vorgängen macht das Runden auf ganze Euro sonst mehrere Euro Unterschied,
+und genau diese Summe muss beim Abgleich stimmen.
+
+Der Brutto-Netto-Rechner ist eine **Schätzung**. Seine Rechenwerte stehen als eine
+Tabelle je Steuerjahr in `src/lib/brutto-netto.ts`; einmal im Jahr ändert der
+Gesetzgeber sie, und dann soll genau ein Block angefasst werden müssen. Die Tests
+prüfen ihn über seine Eigenschaften – Stetigkeit an den Zonengrenzen, Monotonie,
+Deckelung an den Beitragsbemessungsgrenzen –, nicht auf den Cent gegen eine
+Lohnabrechnung.
+
 ## Design
 
 TNG-Farbwelt: Navy `#00336E` trägt Navigation und Primäraktionen, Orange `#F18700`
@@ -104,4 +141,11 @@ Der Seed enthält **nur erfundene Daten**. Keine echten Listen ins Repo.
 
 ```bash
 npm run lint && npm test && npm run build
+```
+
+Bei Änderungen an den Provisionsseiten zusätzlich die Sichtprüfung:
+
+```bash
+npm run dev:skeletons                          # in einem zweiten Terminal
+SHOT_DIR=./screenshots node scripts/screenshots.mjs
 ```

@@ -3,9 +3,11 @@
 Internes Vertriebs-Tool der TNG mit drei Modulen: **Churn-Leitfaden**,
 **Provisionen** und **Challenges**.
 
-Aktueller Stand: **Grundgerüst (Stage 1)** – Layout, Design, Datenmodell, Anmeldung und
-alle vier Seiten stehen und sind mit synthetischen Daten befüllt. Die Fachlogik der
-Module folgt in Stage 2–5, siehe [PLAN.md](./PLAN.md).
+Aktueller Stand: **Grundgerüst (Stage 1)** steht, und das **Provisionsmodul (Stage 4)**
+ist ausgebaut: selbst tracken per Tastendruck, Verdienst-Auswertung von der Stunde bis
+zum Jahr, Brutto-Netto-Rechner und der Abgleich mit der tatsächlichen Auszahlung.
+Import (Stage 2), Churn-Modul (Stage 3) und Challenges (Stage 5) folgen –
+siehe [PLAN.md](./PLAN.md).
 
 Online stellen: [DEPLOY.md](./DEPLOY.md).
 
@@ -63,6 +65,46 @@ npm run dev             # http://localhost:3000
 Passwort für beide: der Wert von `DEMO_PASSWORD` aus der `.env` (Standard: `churntron`).
 Als Admin sind zusätzlich die Team-Übersicht bei den Provisionen und der
 Verwaltungsbereich in der Navigation sichtbar.
+
+---
+
+## Das Provisionsmodul
+
+Fünf Reiter unter **Provisionen**:
+
+| Reiter             | Wofür                                                                                                                                                       |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Tracker**        | Ein Tastendruck ist eine Buchung. Zähler je Taste, optionale Vertragsnummer, Rückgängig-Taste.                                                              |
+| **Verdienst**      | Summen für heute, Woche, Monat, Quartal und Jahr; Schnitt pro Stunde, Arbeitstag, Buchungstag, Kalendertag, Woche, Monat, Quartal, Jahr – brutto und netto. |
+| **Brutto / Netto** | Was von der Provision übrig bleibt, gerechnet als Aufschlag aufs Grundgehalt. Die eigenen Angaben bleiben gespeichert.                                      |
+| **Abgleich**       | Eingeben, was ausgezahlt wurde, und gegen die eigenen Buchungen halten.                                                                                     |
+| **Katalog**        | Alle Sätze aus dem Provisionskatalog zum Nachschlagen, samt Voraussetzungen.                                                                                |
+
+### Abrechnungsperioden: 20. bis 20.
+
+Eine Periode läuft vom **20. eines Monats bis zum 19. des Folgemonats** und wird
+**eine Abrechnung später** ausgezahlt. Die Periode „September 2026" umfasst also
+20.08.–19.09.2026 und wird am 20.10.2026 gezahlt.
+
+Beide Zahlen stehen als Konstante in `src/lib/period.ts` (`STICHTAG`,
+`AUSZAHLUNG_VERZUG_MONATE`). Nennt die Lohnbuchhaltung einen anderen Stichtag oder
+einen anderen Verzug, ist das eine Zeile.
+
+### Die Sätze ändern
+
+Der Katalog steht in `src/lib/commission-catalog.ts` und wird bei jedem
+`npm run db:seed` per Upsert in die Datenbank geschrieben – auch dann, wenn die
+Demo-Daten stehen bleiben sollen. Der Schlüssel (`key`) eines Eintrags ist stabil:
+an ihm hängen die bereits gebuchten Positionen, er darf sich nicht ändern, wenn ein
+Produkt umbenannt wird.
+
+> **Der Brutto-Netto-Rechner ist eine Schätzung, keine Lohnabrechnung.** Nachgebildet
+> sind Einkommensteuertarif (§ 32a EStG), Vorsorgepauschale, Soli, Kirchensteuer und
+> die vier Sozialversicherungszweige mit ihren Beitragsbemessungsgrenzen. Nicht
+> nachgebildet sind individuelle Freibeträge aus den ELStAM, Sachbezüge,
+> Einmalzahlungen als sonstiger Bezug, betriebliche Altersvorsorge und der
+> Sachsen-Zuschlag zur Pflegeversicherung. Die Rechenwerte je Jahr stehen als eine
+> Tabelle in `src/lib/brutto-netto.ts` und werden einmal jährlich nachgezogen.
 
 ### Skeletons anschauen
 

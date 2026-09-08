@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import bcrypt from 'bcryptjs'
 import { PrismaPg } from '@prisma/adapter-pg'
+import type { Contract } from '@prisma/client'
 import {
   PrismaClient,
   Role,
@@ -8,10 +9,17 @@ import {
   CancelReason,
   ActivityType,
   ActivityOutcome,
+  CommissionCategory,
   CommissionStatus,
   ChallengeMetric,
   SourceKind,
 } from '@prisma/client'
+import {
+  CATALOG_CLAWBACK_DAYS,
+  CATALOG_VALID_FROM,
+  COMMISSION_CATALOG,
+} from '../src/lib/commission-catalog'
+import { periodeDavor, periodeVon, periodenZeitraum } from '../src/lib/period'
 
 const db = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -54,7 +62,39 @@ const REASON_TEXTS: Record<CancelReason, string[]> = {
   UNKNOWN: [''],
 }
 
+/**
+ * Der Provisionskatalog steht in src/lib/commission-catalog.ts und wird hier per
+ * Upsert in die Datenbank geschrieben. Das laeuft VOR der Seed-Bremse, damit ein
+ * geaenderter Satz auch dann ankommt, wenn die Demo-Daten stehen bleiben sollen.
+ * Angefasst wird nur, was im Katalog steht – gebuchte Positionen bleiben.
+ */
+async function katalogSchreiben() {
+  for (const [i, eintrag] of COMMISSION_CATALOG.entries()) {
+    const daten = {
+      name: eintrag.name,
+      category: eintrag.category as CommissionCategory,
+      variant: eintrag.variant ?? null,
+      hint: eintrag.hint ?? null,
+      amountCents: eintrag.amountCents,
+      clawbackDays: CATALOG_CLAWBACK_DAYS,
+      sortOrder: i,
+      active: true,
+      validFrom: CATALOG_VALID_FROM,
+    }
+    await db.commissionRule.upsert({
+      where: { key: eintrag.key },
+      update: daten,
+      create: { key: eintrag.key, ...daten },
+    })
+  }
+  console.log(`Provisionskatalog: ${COMMISSION_CATALOG.length} Saetze geschrieben.`)
+}
+
 async function main() {
+  // Der Katalog ist keine Demo-Beilage, sondern die Preisliste – er wird immer
+  // aktualisiert, auch wenn die Bremse gleich abbricht.
+  await katalogSchreiben()
+
   // Beim Deployen laeuft der Seed bei JEDEM Build mit. Ohne diese Bremse wuerde
   // jeder Redeploy die Datenbank leerraeumen. Mit SEED_ONLY_IF_EMPTY=1 fuellt er
   // nur eine noch leere Datenbank – ein zweiter Aufruf tut dann nichts mehr.
@@ -72,11 +112,17 @@ async function main() {
   console.log('Raeume alte Seed-Daten weg ...')
   await db.pointsEvent.deleteMany()
   await db.commission.deleteMany()
+  await db.commissionPayout.deleteMany()
   await db.churnActivity.deleteMany()
   await db.contract.deleteMany()
   await db.importBatch.deleteMany()
-  await db.commissionRule.deleteMany()
+  // Der Katalog bleibt stehen – nur Regeln, die nicht mehr in ihm vorkommen
+  // (Platzhalter aus Stage 1), fliegen raus.
+  await db.commissionRule.deleteMany({
+    where: { key: { notIn: COMMISSION_CATALOG.map((e) => e.key) } },
+  })
   await db.challenge.deleteMany()
+  await db.userSettings.deleteMany()
   await db.user.deleteMany()
   await db.team.deleteMany()
 
@@ -106,23 +152,33 @@ async function main() {
   const reps = users.filter((u) => u.role === Role.REP)
   const admin = users[0]!
 
-  // --- Provisionsregeln (Platzhalter – echtes Modell folgt in Termin 2) ---
-  const ruleNeu = await db.commissionRule.create({
-    data: {
-      name: 'Neuvertrag Glasfaser (Platzhalter)',
-      amountCents: 7500,
-      clawbackDays: 180,
-      validFrom: daysAgo(365),
-    },
-  })
-  const ruleSave = await db.commissionRule.create({
-    data: {
-      name: 'Rückgewinnung nach Kündigung (Platzhalter)',
-      amountCents: 12000,
-      clawbackDays: 90,
-      validFrom: daysAgo(365),
-    },
-  })
+  // --- Einstellungen je Nutzer (Wochenstunden + Steuermerkmale) ----------
+  // Erfundene, aber realistische Werte, damit der Brutto-Netto-Rechner und die
+  // Stundenauswertung in der Demo etwas zu rechnen haben.
+  const einstellungen: Record<string, { std: number; gehalt: number; klasse: number }> = {
+    'admin@tng.de': { std: 40, gehalt: 420_000, klasse: 3 },
+    'rep@tng.de': { std: 38.5, gehalt: 115_000, klasse: 1 },
+    'jo@tng.de': { std: 40, gehalt: 285_000, klasse: 1 },
+    'mika@tng.de': { std: 30, gehalt: 215_000, klasse: 4 },
+    'toni@tng.de': { std: 40, gehalt: 290_000, klasse: 1 },
+    'ren@tng.de': { std: 25, gehalt: 180_000, klasse: 2 },
+  }
+  for (const u of users) {
+    const e = einstellungen[u.email] ?? { std: 40, gehalt: 250_000, klasse: 1 }
+    await db.userSettings.create({
+      data: {
+        userId: u.id,
+        weeklyHours: e.std,
+        workDaysPerWeek: e.std <= 30 ? 4 : 5,
+        baseSalaryCents: e.gehalt,
+        taxClass: e.klasse,
+        churchTaxPercent: 9,
+        children: 0,
+        healthExtraRateBp: 290,
+        taxYear: 2026,
+      },
+    })
+  }
 
   // --- Import-Charge, wie sie spaeter aus dem Lookup-Tool kaeme -----------
   const batch = await db.importBatch.create({
@@ -156,7 +212,7 @@ async function main() {
     ;[statusPlan[i], statusPlan[j]] = [statusPlan[j]!, statusPlan[i]!]
   }
 
-  const contracts = []
+  const contracts: Contract[] = []
   for (let i = 0; i < statusPlan.length; i++) {
     const status = statusPlan[i]!
     const product = pick(PRODUCTS)
@@ -238,27 +294,138 @@ async function main() {
     }
   }
 
-  // --- Provisionen -------------------------------------------------------
-  const thisMonth = new Date().toISOString().slice(0, 7)
-  const lastMonth = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 7)
-  for (const c of contracts) {
-    const wonBack = c.status === ContractStatus.WON_BACK
-    if (!wonBack && c.status !== ContractStatus.ACTIVE) continue
-    await db.commission.create({
+  // --- Provisionsbuchungen -----------------------------------------------
+  // So, wie sie im Tracker entstehen: viele kleine Kampagnen-Vorgaenge, dazwischen
+  // ein Vertragsabschluss. Die Haeufigkeit bildet den Alltag der Vertragsnach-
+  // bearbeitung nach – Welcome Calls sind Massengeschaeft, Business-Abschluesse
+  // die Ausnahme.
+  const regeln = await db.commissionRule.findMany({ where: { active: true } })
+  const regelJeKey = new Map(regeln.map((r) => [r.key, r]))
+  const HAEUFIGKEIT: Record<string, number> = {
+    'welcome-calls': 26,
+    courtesy: 18,
+    dupecheck: 10,
+    'churn-kuendigung': 8,
+    'churn-bau': 6,
+    'churn-widerruf': 5,
+    'churn-postrueck': 7,
+    'tw-upgrade-rest-lt3': 4,
+    'tw-upgrade-ausserhalb': 3,
+    'tw-sidegrade-rest-lt3': 3,
+    'tw-sidegrade-ausserhalb': 2,
+    'winback-privat': 3,
+    flott300: 2,
+    flott500: 1,
+    surf1000: 2,
+    smart1000: 2,
+    fibrefamily: 2,
+    fibrepro: 1,
+    max1000: 1,
+    'waipu-tv': 2,
+    'lte-komplett-5g': 1,
+    'lte-smart-5g': 1,
+    'business-basic1000': 1,
+  }
+  const topf: string[] = []
+  for (const [key, gewicht] of Object.entries(HAEUFIGKEIT)) {
+    if (!regelJeKey.has(key)) continue
+    for (let i = 0; i < gewicht; i++) topf.push(key)
+  }
+
+  const jetzt = new Date()
+  const laufendePeriode = periodeVon(jetzt)
+  // Fuenf Perioden zurueck: genug fuer Quartals- und Jahresschnitt in der Auswertung.
+  const perioden = [
+    periodeDavor(periodeDavor(periodeDavor(periodeDavor(laufendePeriode)))),
+    periodeDavor(periodeDavor(periodeDavor(laufendePeriode))),
+    periodeDavor(periodeDavor(laufendePeriode)),
+    periodeDavor(laufendePeriode),
+    laufendePeriode,
+  ]
+  // Der Ausbilder bucht selbst nur wenig, soll in der Demo aber nicht mit einer
+  // leeren Auswertung dastehen.
+  const buchende = users
+  const vertraegeJeRep = new Map(
+    buchende.map((r) => [r.id, contracts.filter((c) => c.ownerId === r.id)]),
+  )
+
+  let gebucht = 0
+  for (const periode of perioden) {
+    const { von, bis } = periodenZeitraum(periode)
+    const laeuft = periode === laufendePeriode
+    const ende = Math.min(bis.getTime(), jetzt.getTime())
+    const tage = Math.max(1, Math.round((ende - von.getTime()) / 86_400_000))
+
+    for (const rep of buchende) {
+      // Kevin ist der Demo-Login und soll die vollste Liste haben.
+      const proTag = rep.email === 'rep@tng.de' ? 2.6 : rep.role === Role.ADMIN ? 0.5 : 1.4
+      const anzahl = Math.round(tage * proTag * (0.7 + rnd() * 0.6))
+
+      for (let i = 0; i < anzahl; i++) {
+        const key = pick(topf)
+        const regel = regelJeKey.get(key)!
+        // Buchungen fallen auf Werktage, verteilt ueber den Zeitraum.
+        const versatz = Math.floor(rnd() * tage)
+        const zeitpunkt = new Date(
+          von.getTime() + versatz * 86_400_000 + (8 + rnd() * 9) * 3_600_000,
+        )
+        if ([0, 6].includes(zeitpunkt.getUTCDay())) continue
+
+        // Alte Perioden sind abgerechnet, die laufende ist noch offen.
+        const status = laeuft
+          ? pick([CommissionStatus.PENDING, CommissionStatus.PENDING, CommissionStatus.APPROVED])
+          : pick([
+              CommissionStatus.PAID,
+              CommissionStatus.PAID,
+              CommissionStatus.PAID,
+              CommissionStatus.PAID,
+              CommissionStatus.PAID,
+              CommissionStatus.CLAWBACK,
+            ])
+
+        // Ein Teil der Buchungen haengt an einem Vertrag aus der Liste, der Rest
+        // traegt nur die getippte Vertragsnummer – so laeuft es im Alltag auch.
+        const eigene = vertraegeJeRep.get(rep.id) ?? []
+        const vertrag = eigene.length > 0 && rnd() > 0.55 ? pick(eigene) : null
+
+        await db.commission.create({
+          data: {
+            contractId: vertrag?.id ?? null,
+            externalRef: vertrag ? null : rnd() > 0.5 ? `V-2026-${intBetween(10000, 99999)}` : null,
+            userId: rep.id,
+            ruleId: regel.id,
+            amountCents: regel.amountCents ?? 0,
+            status,
+            periodMonth: periode,
+            occurredAt: zeitpunkt,
+            createdAt: zeitpunkt,
+          },
+        })
+        gebucht++
+      }
+    }
+  }
+
+  // --- Auszahlungen, wie sie geprueft werden ------------------------------
+  // Zwei abgeschlossene Perioden fuer den Demo-Login: eine stimmt auf den Cent,
+  // bei der aelteren fehlen ein paar Euro – genau der Fall, fuer den es den
+  // Abgleich gibt.
+  const kevin = users.find((u) => u.email === 'rep@tng.de')!
+  const geprueft = [perioden[perioden.length - 3]!, perioden[perioden.length - 2]!]
+  for (const [index, periode] of geprueft.entries()) {
+    const summe = await db.commission.aggregate({
+      _sum: { amountCents: true },
+      where: { userId: kevin.id, periodMonth: periode, status: { not: CommissionStatus.CLAWBACK } },
+    })
+    const erwartet = summe._sum.amountCents ?? 0
+    await db.commissionPayout.create({
       data: {
-        contractId: c.id,
-        userId: c.ownerId!,
-        ruleId: wonBack ? ruleSave.id : ruleNeu.id,
-        amountCents: wonBack ? 12000 : 7500,
-        status: pick([
-          CommissionStatus.PENDING,
-          CommissionStatus.PENDING,
-          CommissionStatus.APPROVED,
-          CommissionStatus.PAID,
-          CommissionStatus.PAID,
-          CommissionStatus.CLAWBACK,
-        ]),
-        periodMonth: rnd() > 0.35 ? thisMonth : lastMonth,
+        userId: kevin.id,
+        periodKey: periode,
+        // Die aeltere Auszahlung liegt daneben, die juengere passt.
+        paidCents: index === 0 ? Math.max(0, erwartet - 1150) : erwartet,
+        paidOn: new Date(periodenZeitraum(periode).bis.getTime() + 31 * 86_400_000),
+        note: index === 0 ? 'Differenz noch nicht geklärt – Rückfrage läuft.' : null,
       },
     })
   }
@@ -323,9 +490,12 @@ async function main() {
     contracts: await db.contract.count(),
     activities: await db.churnActivity.count(),
     commissions: await db.commission.count(),
+    commissionRules: await db.commissionRule.count(),
+    payouts: await db.commissionPayout.count(),
     challenges: await db.challenge.count(),
     pointsEvents: await db.pointsEvent.count(),
   }
+  console.log(`Provisionsbuchungen im Tracker-Stil: ${gebucht}`)
   console.log('Seed fertig:', counts)
 }
 

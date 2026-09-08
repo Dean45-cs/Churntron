@@ -60,6 +60,16 @@ enum CommissionStatus {
   CLAWBACK
 }
 
+/// Abschnitte des Provisionskatalogs. Sie tragen die Gruppierung der
+/// Tracker-Buttons und die Aufteilung in der Verdienst-Auswertung.
+enum CommissionCategory {
+  SALE_PRIVATE
+  SALE_BUSINESS
+  ADDON
+  TARIFF_CHANGE
+  CAMPAIGN
+}
+
 enum ChallengeMetric {
   CONTRACTS_WON
   CHURN_SAVED
@@ -92,6 +102,8 @@ model User {
   contracts    Contract[]
   activities   ChurnActivity[]
   commissions  Commission[]
+  payouts      CommissionPayout[]
+  settings     UserSettings?
   pointsEvents PointsEvent[]
   imports      ImportBatch[]
 
@@ -147,38 +159,104 @@ model ChurnActivity {
 }
 
 model CommissionRule {
-  id           String    @id @default(cuid())
+  id           String             @id @default(cuid())
+  /// Stabiler Schluessel aus src/lib/commission-catalog.ts. Die Tracker-Buttons
+  /// und alle gebuchten Positionen haengen daran – nicht umbenennen.
+  key          String             @unique
   name         String
+  category     CommissionCategory
+  /// Zusatzbedingung, die den Satz bestimmt, z. B. "Restlaufzeit < 3 Monate".
+  variant      String?
+  hint         String?
   product      String?
-  /// Entweder Fixbetrag ODER Prozentsatz – das Provisionsmodell steht noch nicht fest,
-  /// deshalb liegt es als Daten in der DB und nicht im Code.
+  /// Entweder Fixbetrag ODER Prozentsatz. Der Katalog kennt bisher nur
+  /// Fixbetraege; der Prozentsatz bleibt fuer spaetere Staffeln offen.
   amountCents  Int?
-  percent      Decimal?  @db.Decimal(5, 2)
-  clawbackDays Int       @default(180)
+  percent      Decimal?           @db.Decimal(5, 2)
+  clawbackDays Int                @default(180)
+  sortOrder    Int                @default(0)
+  active       Boolean            @default(true)
   validFrom    DateTime
   validTo      DateTime?
 
   commissions Commission[]
+
+  @@index([category, sortOrder])
 }
 
 model Commission {
-  id         String   @id @default(cuid())
-  contractId String
-  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
-  ruleId     String?
-  rule       CommissionRule? @relation(fields: [ruleId], references: [id])
+  /// Eine gebuchte Provisionsposition. Im Tracker entsteht sie mit einem Tastendruck,
+  /// deshalb ist der Vertrag optional: die Vertragsnummer wird nachgetragen, wenn
+  /// sie zur Hand ist, und blockiert das schnelle Buchen nicht.
+  id          String          @id @default(cuid())
+  contractId  String?
+  contract    Contract?       @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  /// Vertrags- oder Kundennummer als Freitext, wenn der Vertrag noch nicht in der
+  /// Datenbank steht. Kein Klarname – siehe Kopf dieser Datei.
+  externalRef String?
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  ruleId      String?
+  rule        CommissionRule? @relation(fields: [ruleId], references: [id])
 
   amountCents Int
   status      CommissionStatus @default(PENDING)
-  /// Abrechnungsmonat im Format "2026-09"
+  /// Abrechnungsperiode im Format "2026-09". Sie laeuft vom 20.08. bis zum 19.09.
+  /// und wird aus occurredAt abgeleitet – siehe src/lib/period.ts.
   periodMonth String
+  /// Zeitpunkt des Vorgangs. Er entscheidet ueber die Periode und traegt die
+  /// gesamte Verdienst-Auswertung (Tag, Woche, Monat, Quartal, Jahr).
+  occurredAt  DateTime         @default(now())
+  note        String?
 
   createdAt DateTime @default(now())
 
   @@index([userId, periodMonth, status])
+  @@index([userId, occurredAt])
   @@index([status])
+}
+
+/// Was tatsaechlich auf dem Konto ankam. Der Abgleich stellt diesen Betrag der
+/// Summe der gebuchten Positionen einer Periode gegenueber.
+model CommissionPayout {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Periodenschluessel wie in Commission.periodMonth, z. B. "2026-09".
+  periodKey String
+  paidCents Int
+  paidOn    DateTime?
+  note      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, periodKey])
+}
+
+/// Angaben, die nur die eigene Auswertung betreffen: Wochenstunden fuer den
+/// Stundenschnitt und die Steuermerkmale fuer den Brutto-Netto-Rechner.
+/// Bewusst pro Nutzer und nicht global – Steuerklasse ist nichts fuers Team.
+model UserSettings {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  weeklyHours     Decimal @default(40) @db.Decimal(4, 1)
+  workDaysPerWeek Int     @default(5)
+  /// Monatliches Grundgehalt in Cent. Der Rechner legt die Provision oben drauf,
+  /// weil nur der Aufschlag zaehlt – der Steuersatz haengt am Gesamteinkommen.
+  baseSalaryCents Int     @default(0)
+
+  taxClass          Int     @default(1)
+  /// 0, 8 oder 9 Prozent. Schleswig-Holstein liegt bei 9.
+  churchTaxPercent  Int     @default(0)
+  childAllowances   Decimal @default(0) @db.Decimal(3, 1)
+  children          Int     @default(0)
+  /// KV-Zusatzbeitrag der Krankenkasse in Basispunkten: 290 = 2,90 Prozent.
+  healthExtraRateBp Int     @default(290)
+  taxYear           Int     @default(2026)
+
+  updatedAt DateTime @updatedAt
 }
 
 model Challenge {
@@ -225,5 +303,5 @@ model ImportBatch {
   importedBy   User   @relation(fields: [importedById], references: [id])
 
   contracts Contract[]
-  createdAt DateTime @default(now())
+  createdAt DateTime   @default(now())
 }

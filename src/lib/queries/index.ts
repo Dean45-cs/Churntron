@@ -1,7 +1,13 @@
 import { db } from '@/lib/db'
 
+export * from '@/lib/queries/commissions'
+
 /**
  * Alle Datenabfragen der Dashboard-Seiten.
+ *
+ * Die Abfragen des Provisionsmoduls stehen wegen des Umfangs in der
+ * Nachbardatei commissions.ts und werden hier wieder mit ausgegeben – fuer die
+ * Seiten bleibt es bei einem einzigen Import aus '@/lib/queries'.
  *
  * Warum hier und nicht in den Seiten: Server-Components sollen rein bleiben –
  * Zeitbezuege wie Date.now() gehoeren nicht in den Render-Pfad. Ausserdem ist
@@ -123,55 +129,6 @@ export async function getOffeneChurnFaelle(limit = 12) {
       ueberfaellig: c.reactivateAt ? c.reactivateAt.getTime() <= jetzt : false,
     })),
   }
-}
-
-// --- Provisionen -----------------------------------------------------------
-
-export async function getProvisionsKennzahlen() {
-  const [offen, genehmigt, ausgezahlt, storno] = await Promise.all(
-    (['PENDING', 'APPROVED', 'PAID', 'CLAWBACK'] as const).map((status) =>
-      db.commission.aggregate({ _sum: { amountCents: true }, _count: true, where: { status } }),
-    ),
-  )
-  return { offen, genehmigt, ausgezahlt, storno }
-}
-
-export async function getProvisionen({ userId, alle }: { userId?: string; alle: boolean }) {
-  return db.commission.findMany({
-    // Vertriebler sehen ihre eigenen Provisionen, Ausbilder alle.
-    where: alle ? {} : { userId },
-    orderBy: { createdAt: 'desc' },
-    take: 10,
-    select: {
-      id: true,
-      amountCents: true,
-      status: true,
-      periodMonth: true,
-      contract: { select: { externalRef: true, product: true } },
-      rule: { select: { name: true } },
-    },
-  })
-}
-
-export async function getTeamProvisionen() {
-  const perUser = await db.commission.groupBy({
-    by: ['userId'],
-    _sum: { amountCents: true },
-    _count: true,
-  })
-  const users = await db.user.findMany({
-    where: { id: { in: perUser.map((p) => p.userId) } },
-    select: { id: true, displayName: true, team: { select: { name: true } } },
-  })
-
-  return perUser
-    .map((p) => ({
-      userId: p.userId,
-      anzahl: p._count,
-      summeCents: p._sum.amountCents ?? 0,
-      user: users.find((u) => u.id === p.userId) ?? null,
-    }))
-    .sort((a, b) => b.summeCents - a.summeCents)
 }
 
 // --- Challenges ------------------------------------------------------------
