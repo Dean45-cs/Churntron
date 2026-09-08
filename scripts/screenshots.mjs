@@ -15,6 +15,7 @@ const BASE = 'http://localhost:3000'
 const PAGES = [
   ['dashboard', '/dashboard'],
   ['churn', '/dashboard/churn'],
+  ['wiki', '/dashboard/wiki'],
   ['commissions', '/dashboard/commissions'],
   ['commissions-verdienst', '/dashboard/commissions/verdienst'],
   ['commissions-rechner', '/dashboard/commissions/rechner'],

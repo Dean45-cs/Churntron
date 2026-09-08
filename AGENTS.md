@@ -1,8 +1,9 @@
 # Churntron – Projektkonventionen
 
-Internes Vertriebs-Tool der TNG. Drei Module: Churn-Leitfaden, Provisionen, Challenges.
-Das Grundgerüst (Stage 1) steht, das Provisionsmodul (Stage 4) ist ausgebaut.
-Import, Churn-Fachlogik und Challenges folgen (siehe `PLAN.md`).
+Internes Vertriebs-Tool der TNG. Vier Module: Churn-Leitfaden, Einwand-Wiki,
+Provisionen, Challenges. Das Grundgerüst (Stage 1) steht, das Provisionsmodul (Stage 4)
+ist ausgebaut, die Einwand-Wiki (Stage 6) läuft. Import, Churn-Fachlogik und
+Challenges folgen (siehe `PLAN.md`).
 
 ## Die eine Regel, die nicht verhandelbar ist
 
@@ -15,13 +16,18 @@ das offline auf dem Rechner der Vertriebler läuft.
 `src/lib/__tests__/schema-privacy.test.ts` prüft das gegen `prisma/schema.prisma`.
 Wenn der Test rot wird, ist das kein Formfehler – dann wurde die Zusage gebrochen.
 
+Die Einwand-Wiki ist die einzige Stelle, an der jemand Freitext eintippt. Dort greift
+zusätzlich `enthaeltKundendaten` in `src/lib/objection-input.ts`: Ziffernfolgen ab sechs
+Stellen und E-Mail-Adressen kommen nicht in die Datenbank. Wer dort ein Feld ergänzt,
+nimmt es in die Prüfschleife mit auf.
+
 ## Ordnerstruktur
 
 ```
 src/
   app/
     (dashboard)/        Route-Gruppe mit Auth-Guard, Sidebar und Topbar
-      dashboard/        Übersicht + die drei Module, je mit loading.tsx
+      dashboard/        Übersicht + die vier Module, je mit loading.tsx
     login/              Anmeldung (Server Action)
     api/auth/           NextAuth-Handler
   components/
@@ -35,7 +41,11 @@ src/
     queries/            ALLE Datenabfragen der Seiten
       index.ts            Übersicht, Churn, Challenges – und re-exportiert:
       commissions.ts      das Provisionsmodul (eigene Datei wegen des Umfangs)
+      objections.ts       die Einwand-Wiki
     commission-catalog.ts Provisionskatalog als Daten – Quelle für den Seed
+    objection-catalog.ts  Startbestand der Einwand-Wiki – einmalig, nicht überschrieben
+    objection-search.ts   die Suche der Wiki: Stammformen, Wortfelder, Tippfehler
+    objection-input.ts    Prüfung der Wiki-Eingaben, inklusive Datenschutz-Sperre
     period.ts           Abrechnungsperioden 20. bis 20.
     time.ts             Tages-, Wochen- und Monatsgrenzen in Europe/Berlin
     earnings.ts         Verdienst-Auswertung (reine Rechnung, ohne Datenbank)
@@ -110,6 +120,27 @@ Gesetzgeber sie, und dann soll genau ein Block angefasst werden müssen. Die Tes
 prüfen ihn über seine Eigenschaften – Stetigkeit an den Zonengrenzen, Monotonie,
 Deckelung an den Beitragsbemessungsgrenzen –, nicht auf den Cent gegen eine
 Lohnabrechnung.
+
+## Einwand-Wiki
+
+Drei Dinge tragen das Modul:
+
+1. **Die Suche läuft im Browser.** Gesucht wird während eines Telefonats – zwischen
+   Tastendruck und Treffer darf keine Netzrunde liegen. Der Bestand kommt einmal vom
+   Server, bewertet wird in `src/lib/objection-search.ts`, einer reinen Rechnung ohne
+   Datenbank. Ab ein paar hundert Einträgen wandert dieselbe Funktion in eine Server
+   Action oder in die Volltextsuche von Postgres; die Bewertung bleibt dieselbe.
+2. **Die Wortfelder sind Daten, kein Code.** Dass „zu teuer" auch die Einträge zu
+   Preiserhöhung und Rabatt findet, steht als Liste in `THEMEN`. Fehlt ein Wort, das im
+   Gespräch oft fällt, ist das eine Zeile – keine Fachlogik.
+3. **Der Startbestand wird nicht überschrieben.** Der Provisionskatalog ist eine
+   Preisliste und wird bei jedem Seed aktualisiert; die Wiki gehört nach dem ersten Tag
+   dem Team. Der Seed legt fehlende Einträge an (erkennbar am `key`) und fasst
+   vorhandene nie wieder an. Selbst angelegte Einträge haben keinen `key`.
+
+Gelöscht wird nichts: `archived` blendet einen Eintrag aus der Suche aus, das Archiv
+holt ihn zurück. Und `helpful` ist kein Gefällt-mir, sondern die Sortierung bei gleich
+gutem Treffer.
 
 ## Design
 

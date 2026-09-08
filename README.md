@@ -1,13 +1,14 @@
 # Churntron
 
-Internes Vertriebs-Tool der TNG mit drei Modulen: **Churn-Leitfaden**,
-**Provisionen** und **Challenges**.
+Internes Vertriebs-Tool der TNG mit vier Modulen: **Churn-Leitfaden**,
+**Einwand-Wiki**, **Provisionen** und **Challenges**.
 
-Aktueller Stand: **Grundgerüst (Stage 1)** steht, und das **Provisionsmodul (Stage 4)**
-ist ausgebaut: selbst tracken per Tastendruck, Verdienst-Auswertung von der Stunde bis
-zum Jahr, Brutto-Netto-Rechner und der Abgleich mit der tatsächlichen Auszahlung.
-Import (Stage 2), Churn-Modul (Stage 3) und Challenges (Stage 5) folgen –
-siehe [PLAN.md](./PLAN.md).
+Aktueller Stand: **Grundgerüst (Stage 1)** steht, das **Provisionsmodul (Stage 4)**
+ist ausgebaut (selbst tracken per Tastendruck, Verdienst-Auswertung von der Stunde bis
+zum Jahr, Brutto-Netto-Rechner und der Abgleich mit der tatsächlichen Auszahlung), und
+die **Einwand-Wiki (Stage 6)** sammelt Einwandbehandlungen mit einer Suche, die im
+Gespräch mithält. Import (Stage 2), Churn-Modul (Stage 3) und Challenges (Stage 5)
+folgen – siehe [PLAN.md](./PLAN.md).
 
 Online stellen: [DEPLOY.md](./DEPLOY.md).
 
@@ -106,6 +107,51 @@ Produkt umbenannt wird.
 > Sachsen-Zuschlag zur Pflegeversicherung. Die Rechenwerte je Jahr stehen als eine
 > Tabelle in `src/lib/brutto-netto.ts` und werden einmal jährlich nachgezogen.
 
+---
+
+## Die Einwand-Wiki
+
+Gesammelte Einwandbehandlungen – auffindbar, während das Telefonat läuft. Ein Eintrag
+besteht aus dem Einwand im Wortlaut des Kunden, anderen Formulierungen desselben
+Einwands, der Antwort und der Rückfrage, die das Gespräch weiterträgt.
+
+### Die Suche
+
+Getippt wird, was der Kunde gerade gesagt hat. „zu teuer" findet deshalb nicht nur den
+gleichnamigen Eintrag, sondern auch Preiserhöhung, Rabattforderung und
+„woanders günstiger". Vier Schichten, alle in `src/lib/objection-search.ts`:
+
+1. **Normalisieren** – Kleinschreibung, Umlaute ausgeschrieben (`ä` → `ae`). Im
+   Gespräch tippt niemand Umlaute.
+2. **Stammformen** – „kündigen", „Kündigung" und „gekündigt" landen auf demselben Stamm.
+3. **Themen** – ein Katalog von Wortfeldern: „teuer", „Kosten", „Budget" und „Rabatt"
+   gehören zum Thema Preis. Fehlt ein Wort, das im Team oft fällt, ist das **eine Zeile**
+   in `THEMEN` – kein Code.
+4. **Tippfehler** – Levenshtein-Abstand 1 bis 2, je nach Wortlänge. „Kündigng" trifft noch.
+
+Die Liste ist zweigeteilt: Oben steht, was den Einwand selbst trifft (Überschrift,
+Formulierung, Schlagwort, Thema), unter **Vielleicht auch passend** das, was nur im
+Antworttext vorkommt.
+
+Gesucht wird im Browser, ohne Netzrunde – der Bestand kommt einmal vom Server. Das
+trägt bis in den niedrigen dreistelligen Bereich an Einträgen; darüber wandert dieselbe
+Bewertung in eine Server Action oder in die Volltextsuche von Postgres.
+
+### Pflegen
+
+Anlegen, überarbeiten und archivieren geht in der Oberfläche, ohne Umweg über einen
+Admin. Gelöscht wird nichts: ein überholter Eintrag wandert ins Archiv und bleibt
+über den Archiv-Filter erreichbar. „Hat geholfen" ist kein Gefällt-mir, sondern die
+Sortierung – was im Gespräch getragen hat, steht bei gleich gutem Treffer oben.
+
+Der Startbestand steht in `src/lib/objection-catalog.ts`. Anders als der
+Provisionskatalog wird er **nicht** überschrieben: Der Seed legt fehlende Einträge an
+und lässt alles andere in Ruhe. Was das Team einmal umgeschrieben hat, bleibt so.
+
+> **Auch hier gilt: keine Klardaten.** In der Wiki steht, _was_ Kundinnen und Kunden
+> sagen – nie, wer es gesagt hat. Vertragsnummern, Kundennummern, Telefonnummern und
+> E-Mail-Adressen werden beim Speichern abgewiesen (`src/lib/objection-input.ts`).
+
 ### Skeletons anschauen
 
 ```bash
@@ -146,6 +192,10 @@ Der Seed lief noch nicht durch: `npm run db:seed`.
 **In der Datenbank stehen keine Klardaten von Kundinnen und Kunden.** Kein Name,
 keine Adresse, keine Telefonnummer, keine E-Mail. Der Bezug läuft ausschließlich
 über die Vertrags- bzw. Kundennummer (`Contract.externalRef`).
+
+Die Einwand-Wiki ist die einzige Stelle, an der Freitext von Hand in die Datenbank
+kommt. Deshalb wird dort beim Speichern geprüft: Ziffernfolgen ab sechs Stellen und
+E-Mail-Adressen werden abgewiesen, mitsamt einem Satz, der erklärt, warum.
 
 Die Klardaten bleiben im bestehenden Kampagnen-Lookup, das offline auf dem Rechner
 läuft. Dessen Reporting-CSV ist die vorgesehene Schnittstelle nach Churntron –

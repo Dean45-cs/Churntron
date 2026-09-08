@@ -1,9 +1,10 @@
 # Churntron – Projektplan
 
-Internes Vertriebs-Tool der TNG. Drei Module: Churn-Leitfaden, Provisionen, Challenges.
+Internes Vertriebs-Tool der TNG. Vier Module: Churn-Leitfaden, Einwand-Wiki,
+Provisionen, Challenges.
 
-**Stand: Stage 1 (Grundgerüst) und Stage 4 (Provisions-Tracker) sind fertig.**
-Stage 2, 3 und 5 stehen aus.
+**Stand: Stage 1 (Grundgerüst), Stage 4 (Provisions-Tracker) und Stage 6
+(Einwand-Wiki) sind fertig.** Stage 2, 3 und 5 stehen aus.
 
 ---
 
@@ -57,6 +58,7 @@ Vollständig in `prisma/schema.prisma`. Kern:
 | `Challenge`        | Wettbewerb mit Metrik, Ziel und Zeitraum                               |
 | `PointsEvent`      | Punkte als **Einzelereignisse** – trägt den Leaderboard-Zeitraumfilter |
 | `ImportBatch`      | Import-Charge mit erkannter Spaltenzuordnung                           |
+| `Objection`        | Ein Eintrag der Einwand-Wiki – bewusst ohne Vertragsbezug              |
 
 Zwei bewusste Entscheidungen:
 
@@ -139,6 +141,28 @@ und die automatische Clawback-Frist aus `CommissionRule.clawbackDays`.
 Anlege-Formular für Admins, funktionaler Zeitraumfilter im Leaderboard,
 automatische Punktevergabe beim Statuswechsel auf `WON_BACK`.
 
+### Stage 6 – Einwand-Wiki ✅ fertig
+
+Nicht ursprünglich geplant, aber aus dem Alltag heraus gefordert: Gute
+Einwandbehandlungen stehen bisher auf Zetteln, im Kopf oder nirgends – und im Gespräch
+fehlen sie genau dann, wenn sie gebraucht werden.
+
+- **Suche, die im Gespräch mithält.** Getippt wird, was der Kunde gerade gesagt hat.
+  „zu teuer" findet Preiserhöhung, Rabattforderung und „woanders günstiger" mit.
+  Vier Schichten: Umlaute ausschreiben, Stammformen, Wortfelder, Tippfehler-Abstand.
+  Reine Rechnung in `src/lib/objection-search.ts`, im Browser ausgeführt.
+- **Zweigeteilte Trefferliste.** Oben, was den Einwand selbst trifft; darunter, was nur
+  im Antworttext vorkommt.
+- **Pflege in der Oberfläche.** Anlegen, überarbeiten, archivieren – ohne Umweg über
+  einen Admin und ohne Code-Änderung. Der Startbestand (24 Einträge) steht in
+  `src/lib/objection-catalog.ts` und wird vom Seed nur ergänzt, nie überschrieben.
+- **Datenschutz an der Eingabe.** Die erste Stelle im Projekt, an der Freitext von Hand
+  in die Datenbank kommt: Ziffernfolgen ab sechs Stellen und E-Mail-Adressen werden
+  abgewiesen.
+
+Offen: Die Wortfelder in `THEMEN` sind mit dem Vertriebsalltag abzugleichen – welche
+Begriffe fallen am Telefon wirklich? Das ist ein Termin mit dem Team, keine Programmierung.
+
 ---
 
 ## 5. Fahrplan der drei Termine
@@ -153,6 +177,7 @@ Stornofristen · Regelpflege in der Oberfläche
 
 **Termin 3 – Challenges & Feinschliff**
 Punktelogik festlegen · Stage 5 bauen · Design-Review über alle Module ·
+Wortfelder der Einwand-Wiki mit dem Team abgleichen ·
 offene Punkte für die Dynamics-Anbindung sammeln
 
 ---
@@ -171,5 +196,8 @@ offene Punkte für die Dynamics-Anbindung sammeln
    `CommissionRule.percent` und `clawbackDays` stehen bereit, sind aber ungenutzt.
 5. **Steuerwerte 2027** – die Tabelle in `src/lib/brutto-netto.ts` gilt für 2025 und 2026.
 6. **Punktelogik** – welche Aktivität zählt wie viel. Termin 3.
-7. **Hosting** – Vorgaben der TNG-IT (Vercel erlaubt, oder interner Server?).
-8. **Dynamics 365** – Zeitpunkt und Schnittstellen-Details des Custom-Builds.
+7. **Wortfelder der Einwand-Wiki** – `THEMEN` in `src/lib/objection-search.ts` ist ein
+   Vorschlag aus dem Katalog heraus. Welche Begriffe am Telefon wirklich fallen, weiß
+   das Team. Eine Runde gemeinsam durchgehen, dann steht die Suche.
+8. **Hosting** – Vorgaben der TNG-IT (Vercel erlaubt, oder interner Server?).
+9. **Dynamics 365** – Zeitpunkt und Schnittstellen-Details des Custom-Builds.
