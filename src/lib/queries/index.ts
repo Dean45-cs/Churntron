@@ -1,13 +1,15 @@
 import { db } from '@/lib/db'
 
 export * from '@/lib/queries/commissions'
+export * from '@/lib/queries/objections'
 
 /**
  * Alle Datenabfragen der Dashboard-Seiten.
  *
- * Die Abfragen des Provisionsmoduls stehen wegen des Umfangs in der
- * Nachbardatei commissions.ts und werden hier wieder mit ausgegeben – fuer die
- * Seiten bleibt es bei einem einzigen Import aus '@/lib/queries'.
+ * Die Abfragen des Provisionsmoduls und der Einwand-Wiki stehen wegen des
+ * Umfangs in den Nachbardateien commissions.ts und objections.ts und werden
+ * hier wieder mit ausgegeben – fuer die Seiten bleibt es bei einem einzigen
+ * Import aus '@/lib/queries'.
  *
  * Warum hier und nicht in den Seiten: Server-Components sollen rein bleiben –
  * Zeitbezuege wie Date.now() gehoeren nicht in den Render-Pfad. Ausserdem ist
@@ -16,6 +18,56 @@ export * from '@/lib/queries/commissions'
  */
 
 const TAG = 86_400_000
+
+// --- Konto -----------------------------------------------------------------
+
+/**
+ * Die Angaben zum eigenen Konto, die nicht schon in der Sitzung stecken.
+ *
+ * Name, Rolle, Team und Profilbild kommen aus src/lib/session.ts – hier steht
+ * nur, was ausschliesslich die Kontoseite braucht.
+ */
+export async function getKontoDaten(userId: string) {
+  const [user, buchungen] = await Promise.all([
+    db.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { createdAt: true, lastLoginAt: true },
+    }),
+    db.commission.count({ where: { userId } }),
+  ])
+
+  return { ...user, buchungen }
+}
+
+// --- Verwaltung ------------------------------------------------------------
+
+/**
+ * Alle Konten fuer die Nutzerverwaltung. Nur fuer Admins – die Seite prueft das,
+ * bevor sie hierher kommt.
+ *
+ * Ohne die Bild-Bytes: gebraucht wird nur die Version fuer die Bild-Adresse.
+ */
+export async function getNutzerListe() {
+  return db.user.findMany({
+    orderBy: [{ active: 'desc' }, { displayName: 'asc' }],
+    select: {
+      id: true,
+      email: true,
+      displayName: true,
+      role: true,
+      active: true,
+      teamId: true,
+      lastLoginAt: true,
+      createdAt: true,
+      avatar: { select: { version: true } },
+      _count: { select: { commissions: true } },
+    },
+  })
+}
+
+export async function getTeams() {
+  return db.team.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } })
+}
 
 // --- Übersicht -------------------------------------------------------------
 

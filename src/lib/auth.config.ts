@@ -28,21 +28,15 @@ export const authConfig = {
       if (onDashboard) return loggedIn
       return true
     },
-    jwt({ token, user }) {
-      if (user) {
-        token.role = user.role
-        token.displayName = user.displayName
-        token.team = user.team
-      }
-      return token
-    },
+    /**
+     * Im Token steht allein die Nutzer-ID (`token.sub`, von NextAuth selbst
+     * gesetzt). Name, Rolle, Team und Profilbild sind veraenderlich; sie hier
+     * mitzuschreiben hiesse, sie bis zur naechsten Anmeldung einzufrieren.
+     * Sie kommen deshalb bei jeder Anfrage frisch aus der Datenbank –
+     * siehe src/lib/session.ts.
+     */
     session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.sub ?? ''
-        session.user.role = token.role
-        session.user.displayName = token.displayName
-        session.user.team = token.team
-      }
+      if (session.user) session.user.id = token.sub ?? ''
       return session
     },
   },

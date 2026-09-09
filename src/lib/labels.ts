@@ -6,6 +6,8 @@ import type {
   ContractStatus,
   ActivityType,
   ActivityOutcome,
+  ObjectionCategory,
+  Role,
 } from '@prisma/client'
 
 /**
@@ -13,6 +15,11 @@ import type {
  * Der Kuendigungsgrund-Katalog ist noch ein Vorschlag – er wird mit dem
  * Ausbilder gegen die echten Listen abgeglichen (siehe PLAN.md).
  */
+export const ROLE_LABEL: Record<Role, string> = {
+  REP: 'Vertrieb',
+  ADMIN: 'Ausbilder / Teamleitung',
+}
+
 export const CANCEL_REASON_LABEL: Record<CancelReason, string> = {
   PRICE: 'Preis',
   SERVICE: 'Service',
@@ -70,6 +77,27 @@ export const ACTIVITY_TYPE_LABEL: Record<ActivityType, string> = {
   OFFER: 'Angebot',
   NOTE: 'Notiz',
 }
+
+/**
+ * Themen der Einwand-Wiki. Die Reihenfolge hier ist die Reihenfolge der
+ * Schnellfilter ueber der Suche – vorne, was am Telefon am haeufigsten kommt.
+ */
+export const OBJECTION_CATEGORY_LABEL: Record<ObjectionCategory, string> = {
+  PRICE: 'Preis',
+  COMPETITOR: 'Wettbewerb',
+  NEED: 'Bedarf',
+  TIMING: 'Zeitpunkt',
+  DECISION: 'Entscheidung',
+  CONTRACT: 'Vertrag',
+  TECHNICAL: 'Technik',
+  CONSTRUCTION: 'Bau',
+  SERVICE: 'Service',
+  TRUST: 'Vertrauen',
+  OTHER: 'Sonstiges',
+}
+
+/** Die Kategorien in der Reihenfolge, in der sie oben stehen sollen. */
+export const OBJECTION_CATEGORIES = Object.keys(OBJECTION_CATEGORY_LABEL) as ObjectionCategory[]
 
 export const ACTIVITY_OUTCOME_LABEL: Record<ActivityOutcome, string> = {
   REACHED: 'Erreicht',

@@ -66,10 +66,72 @@ describe('Datenschutz: Contract enthaelt keine Klardaten', () => {
   })
 })
 
+/**
+ * Die zweite Zusage, seit es Profile gibt: von den eigenen Leuten steht auch
+ * nur das Noetige drin.
+ *
+ * Beschaeftigtendaten sind erlaubt – ohne E-Mail keine Anmeldung, ohne Namen
+ * kein Leaderboard. Aber Privatanschrift, Rufnummer oder Geburtsdatum haben in
+ * einem Vertriebswerkzeug nichts zu suchen, und ein Anwesenheitsprotokoll erst
+ * recht nicht: Provisionen und Leaderboard sind schon jetzt
+ * mitbestimmungspflichtige Leistungsdaten (siehe DEPLOY.md).
+ */
+describe('Datenschutz: User traegt nur, was gebraucht wird', () => {
+  const verboten = [
+    'address',
+    'adresse',
+    'street',
+    'strasse',
+    'plz',
+    'city',
+    'ort',
+    'phone',
+    'telefon',
+    'mobil',
+    'birthday',
+    'geburtsdatum',
+    'geburtstag',
+    'iban',
+    'personalnummer',
+    // Ein Verlauf statt eines einzelnen Zeitpunkts waere eine Anwesenheitsliste.
+    'loginHistory',
+    'sessions',
+    'lastSeenAt',
+  ]
+
+  const felder = fieldNames(modelBody('User')).map((f) => f.toLowerCase())
+
+  it.each(verboten)('hat kein Feld "%s"', (feld) => {
+    expect(felder).not.toContain(feld.toLowerCase())
+  })
+
+  it('haelt das Profilbild in einer eigenen Tabelle', () => {
+    expect(fieldNames(modelBody('UserAvatar'))).toContain('data')
+    // Nicht an User: sonst laegen die Bytes bei jeder Nutzerabfrage mit auf dem Tisch.
+    expect(felder).not.toContain('avatardata')
+  })
+})
+
+describe('Datenschutz: die Einwand-Wiki sammelt Formulierungen, keine Faelle', () => {
+  const felder = fieldNames(modelBody('Objection')).map((f) => f.toLowerCase())
+
+  it.each(['contractid', 'externalref', 'customerref', 'name', 'phone', 'email'])(
+    'hat kein Feld "%s"',
+    (feld) => {
+      expect(felder).not.toContain(feld)
+    },
+  )
+
+  it('haengt an keinem Vertrag – ein Eintrag ist kein Gespraechsprotokoll', () => {
+    expect(modelBody('Objection')).not.toMatch(/Contract/)
+  })
+})
+
 describe('Datenmodell traegt die geplanten Bausteine', () => {
   it.each([
     'Team',
     'User',
+    'UserAvatar',
     'Contract',
     'ChurnActivity',
     'CommissionRule',
@@ -77,6 +139,7 @@ describe('Datenmodell traegt die geplanten Bausteine', () => {
     'Challenge',
     'PointsEvent',
     'ImportBatch',
+    'Objection',
   ])('kennt das Modell %s', (name) => {
     expect(() => modelBody(name)).not.toThrow()
   })
