@@ -37,6 +37,7 @@ src/
       commissions.ts      das Provisionsmodul (eigene Datei wegen des Umfangs)
     commission-catalog.ts Provisionskatalog als Daten – Quelle für den Seed
     period.ts           Abrechnungsperioden 20. bis 20.
+    zeitraum.ts         Kalendermonat und Abrechnungszeitraum unter einer Schnittstelle
     time.ts             Tages-, Wochen- und Monatsgrenzen in Europe/Berlin
     earnings.ts         Verdienst-Auswertung (reine Rechnung, ohne Datenbank)
     brutto-netto.ts     Lohnsteuer, Soli, Sozialabgaben – reine Rechnung
@@ -94,6 +95,15 @@ Drei Dinge sind hier nicht verhandelbar:
 2. **Eine Periode läuft vom 20. bis zum 20.** Der Stichtag und der Auszahlungsverzug
    stehen als Konstante in `src/lib/period.ts` und sonst nirgends. `periodMonth` einer
    Buchung wird immer aus `occurredAt` über `periodeVon()` abgeleitet.
+
+   Der Kalendermonat bleibt daneben stehen. Dieselben Buchungen ergeben zwei
+   verschiedene Zahlen – „was habe ich im September gemacht" ist eine andere Frage
+   als „was steht auf der nächsten Abrechnung", und beide werden gestellt. Deshalb
+   zeigt jede Ansicht **beide Zuschnitte**, jeder mit seiner Spanne darunter, nie
+   eine allein und nie eine unbeschriftete Zahl namens „Monat". Beide laufen über
+   `src/lib/zeitraum.ts` (`art: 'monat' | 'periode'`); die Karte dafür ist
+   `components/zeitraum-vergleich.tsx`.
+
 3. **Tages- und Wochengrenzen laufen über `src/lib/time.ts`, nie über die Serverzeit.**
    Der Server läuft in UTC, gearbeitet wird in Deutschland. Eine Buchung um 00:30 Uhr
    würde sonst auf den Vortag rutschen – und „was habe ich heute verdient" ist genau

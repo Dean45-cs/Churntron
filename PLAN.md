@@ -166,7 +166,10 @@ offene Punkte für die Dynamics-Anbindung sammeln
 3. **Auszahlungsrhythmus bestätigen** – Angenommen ist: Periode vom 20. bis zum 19.,
    Auszahlung eine Abrechnung später. Der Katalog sagt nur „im Folgemonat abgerechnet".
    Nennt die Lohnbuchhaltung etwas anderes, sind es zwei Konstanten in
-   `src/lib/period.ts` (`STICHTAG`, `AUSZAHLUNG_VERZUG_MONATE`).
+   `src/lib/period.ts` (`STICHTAG`, `AUSZAHLUNG_VERZUG_MONATE`). Bis das bestätigt ist,
+   zeigt die Oberfläche ohnehin beide Zuschnitte nebeneinander – Kalendermonat und
+   Abrechnungszeitraum, siehe `src/lib/zeitraum.ts`. Ein anderer Stichtag ändert dann
+   nur die zweite Spalte, nicht die Ansicht.
 4. **Staffeln, Sonderboni, Stornofristen** – der Katalog kennt bisher nur Fixbeträge.
    `CommissionRule.percent` und `clawbackDays` stehen bereit, sind aber ungenutzt.
 5. **Steuerwerte 2027** – die Tabelle in `src/lib/brutto-netto.ts` gilt für 2025 und 2026.

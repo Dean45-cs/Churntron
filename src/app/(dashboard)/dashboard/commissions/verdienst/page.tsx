@@ -4,9 +4,18 @@ import { auth } from '@/lib/auth'
 import { devDelay } from '@/lib/dev'
 import { getStatusStaende, getTeamProvisionen, getVerdienst } from '@/lib/queries'
 import { FENSTER_LABEL, type Fenster } from '@/lib/earnings'
+import {
+  ZEITRAUM_ARTEN,
+  ZEITRAUM_ERKLAERUNG,
+  ZEITRAUM_KURZ,
+  ZEITRAUM_LABEL,
+  istZeitraumart,
+  type Zeitraumart,
+} from '@/lib/zeitraum'
 import { COMMISSION_CATEGORY_LABEL } from '@/lib/labels'
 import { cn, formatEuro, formatProzent, formatZahl } from '@/lib/utils'
 import { StatCard } from '@/components/stat-card'
+import { ZeitraumVergleich } from '@/components/zeitraum-vergleich'
 import { StatCardGridSkeleton } from '@/components/skeletons/stat-card-skeleton'
 import { AnteilsBalken, MonatsSaeulen } from '@/components/bar-series'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,22 +23,28 @@ import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 import { VerdienstSkeleton } from '@/components/skeletons/verdienst-skeleton'
 
 const FENSTER: Fenster[] = ['30', '90', 'jahr', 'alles']
-const TEAM_WIDTHS = ['w-32', 'w-24', 'w-20', 'w-24']
+const TEAM_WIDTHS = ['w-32', 'w-24', 'w-20', 'w-24', 'w-24']
 
 /**
  * Die Auswertung: was kommt pro Tag, pro Woche, pro Monat, pro Quartal, pro Jahr
  * und pro Stunde herum. Der Bezugszeitraum steht in der Adresse (?fenster=90),
- * damit die Auswahl teilbar und ohne Client-JavaScript umschaltbar bleibt.
+ * der Zuschnitt des Verlaufs daneben (?verlauf=periode) – damit bleibt beides
+ * teilbar und ohne Client-JavaScript umschaltbar.
  */
 export default async function VerdienstPage({
   searchParams,
 }: {
-  searchParams: Promise<{ fenster?: string }>
+  searchParams: Promise<{ fenster?: string; verlauf?: string }>
 }) {
   const session = await auth()
   const isAdmin = session?.user.role === 'ADMIN'
-  const wunsch = (await searchParams).fenster
-  const fenster: Fenster = FENSTER.includes(wunsch as Fenster) ? (wunsch as Fenster) : '90'
+  const wunsch = await searchParams
+  const fenster: Fenster = FENSTER.includes(wunsch.fenster as Fenster)
+    ? (wunsch.fenster as Fenster)
+    : '90'
+  const verlauf: Zeitraumart = istZeitraumart(wunsch.verlauf) ? wunsch.verlauf : 'monat'
+  const adresse = (f: Fenster, v: Zeitraumart) =>
+    `/dashboard/commissions/verdienst?fenster=${f}&verlauf=${v}`
 
   return (
     <>
@@ -38,7 +53,7 @@ export default async function VerdienstPage({
         {FENSTER.map((f) => (
           <Link
             key={f}
-            href={`/dashboard/commissions/verdienst?fenster=${f}`}
+            href={adresse(f, verlauf)}
             aria-current={f === fenster ? 'true' : undefined}
             className={cn(
               'rounded-xl px-3.5 py-2 text-sm font-medium transition-colors',
@@ -52,8 +67,13 @@ export default async function VerdienstPage({
         ))}
       </div>
 
-      <Suspense key={fenster} fallback={<VerdienstSkeleton />}>
-        <Auswertung userId={session!.user.id} fenster={fenster} />
+      <Suspense key={`${fenster}-${verlauf}`} fallback={<VerdienstSkeleton />}>
+        <Auswertung
+          userId={session!.user.id}
+          fenster={fenster}
+          verlauf={verlauf}
+          adresse={adresse}
+        />
       </Suspense>
 
       {/* Laedt fuer sich: die Statusuebersicht haengt nicht am Bezugszeitraum. */}
@@ -74,7 +94,17 @@ export default async function VerdienstPage({
   )
 }
 
-async function Auswertung({ userId, fenster }: { userId: string; fenster: Fenster }) {
+async function Auswertung({
+  userId,
+  fenster,
+  verlauf,
+  adresse,
+}: {
+  userId: string
+  fenster: Fenster
+  verlauf: Zeitraumart
+  adresse: (f: Fenster, v: Zeitraumart) => string
+}) {
   await devDelay()
   const { auswertung: a, profil } = await getVerdienst(userId, fenster)
 
@@ -120,10 +150,11 @@ async function Auswertung({ userId, fenster }: { userId: string; fenster: Fenste
   ]
 
   const gesamtImFenster = Math.max(1, a.fenster.summeCents)
+  const reihe = a.verlauf[verlauf]
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Heute"
           value={formatEuro(a.zeitraeume.heute.summeCents)}
@@ -136,11 +167,6 @@ async function Auswertung({ userId, fenster }: { userId: string; fenster: Fenste
           hint={`${a.zeitraeume.woche.anzahl} Vorgänge`}
         />
         <StatCard
-          label="Dieser Monat"
-          value={formatEuro(a.zeitraeume.monat.summeCents)}
-          hint={`${a.zeitraeume.monat.anzahl} Vorgänge`}
-        />
-        <StatCard
           label="Dieses Quartal"
           value={formatEuro(a.zeitraeume.quartal.summeCents)}
           hint={`${a.zeitraeume.quartal.anzahl} Vorgänge`}
@@ -151,6 +177,15 @@ async function Auswertung({ userId, fenster }: { userId: string; fenster: Fenste
           hint={`${a.zeitraeume.jahr.anzahl} Vorgänge`}
         />
       </div>
+
+      {/* Der laufende Monat in beiden Zuschnitten – dieselbe Karte wie im
+          Tracker, damit die Zahl ueberall dieselbe Bedeutung hat. */}
+      <ZeitraumVergleich
+        zeitraeume={[
+          { ...a.laufend.monat, ...a.zeitraeume.monat },
+          { ...a.laufend.periode, ...a.zeitraeume.periode },
+        ]}
+      />
 
       <Card className="overflow-hidden">
         <CardHeader className="border-border border-b pb-4">
@@ -204,18 +239,41 @@ async function Auswertung({ userId, fenster }: { userId: string; fenster: Fenste
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle>Provision je Monat</CardTitle>
-            <CardDescription>Letzte zwölf Monate, ohne stornierte Vorgänge.</CardDescription>
+          <CardHeader className="flex-row flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>Provision je {ZEITRAUM_LABEL[verlauf]}</CardTitle>
+              <CardDescription>
+                Letzte zwölf Monate {ZEITRAUM_ERKLAERUNG[verlauf]}, ohne stornierte Vorgänge.
+              </CardDescription>
+            </div>
+            {/* Derselbe Verlauf, zwei Zuschnitte: zwischen dem 20. und dem
+                Monatsende sind das zwei verschiedene Säulen. */}
+            <div className="flex gap-1">
+              {ZEITRAUM_ARTEN.map((art) => (
+                <Link
+                  key={art}
+                  href={adresse(fenster, art)}
+                  aria-current={art === verlauf ? 'true' : undefined}
+                  className={cn(
+                    'rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors',
+                    art === verlauf
+                      ? 'bg-primary text-primary-foreground'
+                      : 'border-border hover:bg-secondary border',
+                  )}
+                >
+                  {ZEITRAUM_KURZ[art]}
+                </Link>
+              ))}
+            </div>
           </CardHeader>
           <div className="px-6 pb-6">
-            {a.jeMonat.length > 0 ? (
+            {reihe.length > 0 ? (
               <MonatsSaeulen
-                daten={a.jeMonat.map((m, i) => ({
+                daten={reihe.map((m, i) => ({
                   label: m.label,
                   wert: m.summeCents,
                   hinweis: formatEuro(m.summeCents),
-                  hervorheben: i === a.jeMonat.length - 1,
+                  hervorheben: i === reihe.length - 1,
                 }))}
               />
             ) : (
@@ -321,7 +379,7 @@ async function StatusUebersicht({ userId }: { userId: string }) {
 
 async function TeamUebersicht() {
   await devDelay(1600)
-  const zeilen = await getTeamProvisionen()
+  const { zeilen, monat, periode } = await getTeamProvisionen()
 
   return (
     <Card className="overflow-hidden">
@@ -335,7 +393,14 @@ async function TeamUebersicht() {
             <tr>
               <th className="px-6 py-3 text-left font-semibold">Vertriebler</th>
               <th className="px-6 py-3 text-left font-semibold">Team</th>
-              <th className="px-6 py-3 text-right font-semibold">Laufende Periode</th>
+              <th className="px-6 py-3 text-right font-semibold">
+                Kalendermonat
+                <span className="block font-mono font-normal normal-case">{monat.spanne}</span>
+              </th>
+              <th className="px-6 py-3 text-right font-semibold">
+                Abrechnungszeitraum
+                <span className="block font-mono font-normal normal-case">{periode.spanne}</span>
+              </th>
               <th className="px-6 py-3 text-right font-semibold">Gesamt</th>
             </tr>
           </thead>
@@ -344,6 +409,9 @@ async function TeamUebersicht() {
               <tr key={z.userId} className="hover:bg-muted/30">
                 <td className="px-6 py-3.5 font-medium">{z.user?.displayName}</td>
                 <td className="text-muted-foreground px-6 py-3.5">{z.user?.team?.name ?? '—'}</td>
+                <td className="tabular px-6 py-3.5 text-right font-mono">
+                  {formatEuro(z.monatCents)}
+                </td>
                 <td className="tabular px-6 py-3.5 text-right font-mono font-semibold">
                   {formatEuro(z.periodeCents)}
                 </td>

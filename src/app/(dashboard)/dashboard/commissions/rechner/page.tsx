@@ -2,7 +2,6 @@ import { Suspense } from 'react'
 import { auth } from '@/lib/auth'
 import { devDelay } from '@/lib/dev'
 import { getArbeitsprofil, getTrackerStand } from '@/lib/queries'
-import { periodenName } from '@/lib/period'
 import { RechnerSkeleton } from '@/components/skeletons/rechner-skeleton'
 import { RechnerForm } from './rechner-form'
 
@@ -25,11 +24,17 @@ async function Rechner({ userId }: { userId: string }) {
   await devDelay()
   const [profil, stand] = await Promise.all([getArbeitsprofil(userId), getTrackerStand(userId)])
 
+  // Beide Zuschnitte zur Wahl, der Abrechnungszeitraum zuerst: das ist der
+  // Betrag, der tatsaechlich ueberwiesen wird.
   return (
     <RechnerForm
       profil={profil}
-      provisionVorschlagCents={stand.periode.summeCents}
-      periodenLabel={periodenName(stand.periode.schluessel)}
+      vorschlaege={[stand.periode, stand.monat].map((z) => ({
+        art: z.art,
+        label: `Gebucht im ${z.artLabel}`,
+        spanne: z.spanne,
+        cents: z.summeCents,
+      }))}
     />
   )
 }

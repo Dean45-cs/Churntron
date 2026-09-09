@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/field'
 import { CommissionStatusBadge } from '@/components/status-badge'
 import { StatCard } from '@/components/stat-card'
+import { ZeitraumVergleich } from '@/components/zeitraum-vergleich'
+import { STICHTAG } from '@/lib/period'
 import { cn, formatEuro } from '@/lib/utils'
 import { buchen, buchungZuruecknehmen } from './actions'
 
@@ -66,7 +68,7 @@ export function Tracker({ gruppen, stand }: { gruppen: KatalogGruppe[]; stand: T
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           label="Heute"
           value={formatEuro(stand.heute.summeCents + wartendeSumme)}
@@ -79,16 +81,35 @@ export function Tracker({ gruppen, stand }: { gruppen: KatalogGruppe[]; stand: T
           hint={`${stand.woche.anzahl + wartend.length} Vorgänge`}
         />
         <StatCard
-          label="Laufende Periode"
-          value={formatEuro(stand.periode.summeCents + wartendeSumme)}
-          hint={`noch ${stand.periode.restTage} Tage bis zum Stichtag`}
-        />
-        <StatCard
           label="Noch nicht ausgezahlt"
-          value={formatEuro(stand.periode.offenCents)}
-          hint="über alle Perioden"
+          value={formatEuro(stand.offenCents)}
+          hint="über alle Abrechnungszeiträume"
         />
       </div>
+
+      {/* Beide Zuschnitte, immer zusammen: eine frische Buchung zaehlt in
+          beiden mit, also wandert die offene Summe auch in beide. */}
+      <ZeitraumVergleich
+        zeitraeume={[
+          {
+            ...stand.monat,
+            summeCents: stand.monat.summeCents + wartendeSumme,
+            anzahl: stand.monat.anzahl + wartend.length,
+          },
+          {
+            ...stand.periode,
+            summeCents: stand.periode.summeCents + wartendeSumme,
+            anzahl: stand.periode.anzahl + wartend.length,
+          },
+        ]}
+        fussnote={
+          <>
+            Dieselben Buchungen, zwei Zuschnitte: der Kalendermonat zählt vom 1. bis zum Monatsende,
+            der Abrechnungszeitraum vom {STICHTAG}. bis zum {STICHTAG - 1}. des Folgemonats.
+            Abgerechnet wird der zweite.
+          </>
+        }
+      />
 
       <Card>
         <CardHeader className="border-border flex-row flex-wrap items-end justify-between gap-4 border-b pb-4">
@@ -187,7 +208,7 @@ export function Tracker({ gruppen, stand }: { gruppen: KatalogGruppe[]; stand: T
         <CardHeader className="border-border flex-row items-center justify-between border-b pb-4">
           <CardTitle>Zuletzt gebucht</CardTitle>
           <span className="text-muted-foreground text-sm">
-            Auszahlung dieser Periode am{' '}
+            Auszahlung des Abrechnungszeitraums am{' '}
             <span className="tabular font-mono">{stand.periode.auszahlungAm}</span>
           </span>
         </CardHeader>

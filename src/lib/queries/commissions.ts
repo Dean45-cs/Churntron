@@ -2,16 +2,22 @@ import type { CommissionCategory, CommissionStatus, Prisma } from '@prisma/clien
 import { db } from '@/lib/db'
 import { werteVerdienstAus, type Arbeitsprofil, type Buchung, type Fenster } from '@/lib/earnings'
 import type { Steuerjahr, Steuerklasse } from '@/lib/brutto-netto'
+import { auszahlungsTag, periodeAbgeschlossen, periodeVon } from '@/lib/period'
 import {
-  auszahlungsTag,
-  letztePerioden,
-  periodeAbgeschlossen,
-  periodenFortschritt,
-  periodenLabel,
-  periodenName,
-  periodeVon,
-} from '@/lib/period'
-import { tagesBeginn, tagesEnde, tagesSchluessel, wochenBeginn } from '@/lib/time'
+  monatsGrenzen,
+  monatsSchluessel,
+  tagesBeginn,
+  tagesEnde,
+  tagesSchluessel,
+  wochenBeginn,
+} from '@/lib/time'
+import {
+  letzteZeitraeume,
+  zeitraumName,
+  zeitraumSpanne,
+  zeitraumStand,
+  type ZeitraumStand,
+} from '@/lib/zeitraum'
 import { formatDate } from '@/lib/utils'
 
 /**
@@ -83,19 +89,21 @@ export type TrackerBuchung = {
   note: string | null
 }
 
+/** Ein Zeitraum mit seiner Summe – dasselbe Format fuer Monat und Abrechnung. */
+export type ZeitraumSumme = ZeitraumStand & { summeCents: number; anzahl: number }
+
 export type TrackerStand = {
   heute: { summeCents: number; anzahl: number }
   woche: { summeCents: number; anzahl: number }
-  periode: {
-    schluessel: string
-    summeCents: number
-    anzahl: number
-    offenCents: number
-    restTage: number
-    prozent: number
+  /** Kalendermonat: was im September gelaufen ist. */
+  monat: ZeitraumSumme
+  /** Abrechnungszeitraum: was auf der naechsten Abrechnung stehen muesste. */
+  periode: ZeitraumSumme & {
     /** Fertig formatiert: die Komponente soll kein Datum mehr anfassen muessen. */
     auszahlungAm: string
   }
+  /** Noch nicht ausgezahlt, ueber alle Zeitraeume hinweg. */
+  offenCents: number
   /** Wie oft heute schon gebucht – haengt als Zaehler an der Taste. */
   heuteJeRegel: Record<string, number>
   letzteBuchungen: TrackerBuchung[]
@@ -118,8 +126,13 @@ export async function getTrackerStand(userId: string): Promise<TrackerStand> {
   const heuteVon = tagesBeginn(jetzt)
   const heuteBis = tagesEnde(jetzt)
   const periode = periodeVon(jetzt)
+  const monat = monatsSchluessel(jetzt)
+  // Der Kalendermonat steht nicht an der Buchung – er ergibt sich aus dem
+  // Zeitpunkt. Die Periode dagegen ist als `periodMonth` festgehalten, damit
+  // eine spaetere Verschiebung des Stichtags alte Abrechnungen nicht umbaut.
+  const monatsRaum = monatsGrenzen(monat)
 
-  const [heute, woche, inPeriode, offen, heutigeZeilen, letzte] = await Promise.all([
+  const [heute, woche, imMonat, inPeriode, offen, heutigeZeilen, letzte] = await Promise.all([
     db.commission.aggregate({
       _sum: { amountCents: true },
       _count: true,
@@ -129,6 +142,15 @@ export async function getTrackerStand(userId: string): Promise<TrackerStand> {
       _sum: { amountCents: true },
       _count: true,
       where: { userId, ...OHNE_STORNO, occurredAt: { gte: wochenBeginn(jetzt), lt: heuteBis } },
+    }),
+    db.commission.aggregate({
+      _sum: { amountCents: true },
+      _count: true,
+      where: {
+        userId,
+        ...OHNE_STORNO,
+        occurredAt: { gte: monatsRaum.von, lt: monatsRaum.bis },
+      },
     }),
     db.commission.aggregate({
       _sum: { amountCents: true },
@@ -167,20 +189,21 @@ export async function getTrackerStand(userId: string): Promise<TrackerStand> {
     if (key) heuteJeRegel[key] = (heuteJeRegel[key] ?? 0) + 1
   }
 
-  const fortschritt = periodenFortschritt(periode, jetzt)
-
   return {
     heute: { summeCents: heute._sum.amountCents ?? 0, anzahl: heute._count },
     woche: { summeCents: woche._sum.amountCents ?? 0, anzahl: woche._count },
+    monat: {
+      ...zeitraumStand('monat', jetzt, monat),
+      summeCents: imMonat._sum.amountCents ?? 0,
+      anzahl: imMonat._count,
+    },
     periode: {
-      schluessel: periode,
+      ...zeitraumStand('periode', jetzt, periode),
       summeCents: inPeriode._sum.amountCents ?? 0,
       anzahl: inPeriode._count,
-      offenCents: offen._sum.amountCents ?? 0,
-      restTage: fortschritt.restTage,
-      prozent: fortschritt.prozent,
       auszahlungAm: formatDate(auszahlungsTag(periode)),
     },
+    offenCents: offen._sum.amountCents ?? 0,
     heuteJeRegel,
     letzteBuchungen: letzte.map((b) => ({
       id: b.id,
@@ -270,6 +293,12 @@ export type PeriodenStand = {
   name: string
   /** "20.08. – 19.09.2026" */
   zeitraum: string
+  /**
+   * Derselbe Monat als Kalendermonat gezaehlt. Steht beim Abgleich daneben,
+   * weil das die Zahl ist, die der Vertriebler im Kopf hat – die Abrechnung
+   * nennt eine andere, und der Unterschied sind genau die Tage ab dem 20.
+   */
+  monat: { spanne: string; summeCents: number; anzahl: number }
   erwartetCents: number
   anzahl: number
   stornoCents: number
@@ -288,17 +317,43 @@ export type PeriodenStand = {
 
 export async function getPeriodenStaende(userId: string, anzahl = 6): Promise<PeriodenStand[]> {
   const jetzt = new Date()
-  const perioden = letztePerioden(periodeVon(jetzt), anzahl)
+  const perioden = letzteZeitraeume('periode', periodeVon(jetzt), anzahl)
+  // Die Kalendermonate zu denselben Schluesseln. Sie reichen weiter zurueck als
+  // die Perioden, weil die aelteste Periode schon im Vormonat beginnt.
+  const monatsRaum = {
+    von: monatsGrenzen(perioden[perioden.length - 1]!).von,
+    bis: monatsGrenzen(perioden[0]!).bis,
+  }
 
-  const [gruppen, auszahlungen] = await Promise.all([
+  const [gruppen, monatsZeilen, auszahlungen] = await Promise.all([
     db.commission.groupBy({
       by: ['periodMonth', 'status'],
       where: { userId, periodMonth: { in: perioden } },
       _sum: { amountCents: true },
       _count: true,
     }),
+    // Nach Kalendermonat kann Prisma nicht gruppieren – der Monat steht nicht
+    // als Spalte an der Buchung. Also die Zeilen des Zeitraums holen und hier
+    // buendeln; mehr als Betrag und Zeitpunkt braucht es dafuer nicht.
+    db.commission.findMany({
+      where: {
+        userId,
+        ...OHNE_STORNO,
+        occurredAt: { gte: monatsRaum.von, lt: monatsRaum.bis },
+      },
+      select: { amountCents: true, occurredAt: true },
+    }),
     db.commissionPayout.findMany({ where: { userId, periodKey: { in: perioden } } }),
   ])
+
+  const jeMonat = new Map<string, { summeCents: number; anzahl: number }>()
+  for (const z of monatsZeilen) {
+    const key = monatsSchluessel(z.occurredAt)
+    const eintrag = jeMonat.get(key) ?? { summeCents: 0, anzahl: 0 }
+    eintrag.summeCents += z.amountCents
+    eintrag.anzahl++
+    jeMonat.set(key, eintrag)
+  }
 
   return perioden.map((schluessel) => {
     const zeilen = gruppen.filter((g) => g.periodMonth === schluessel)
@@ -314,8 +369,12 @@ export async function getPeriodenStaende(userId: string, anzahl = 6): Promise<Pe
 
     return {
       schluessel,
-      name: periodenName(schluessel),
-      zeitraum: periodenLabel(schluessel),
+      name: zeitraumName('periode', schluessel),
+      zeitraum: zeitraumSpanne('periode', schluessel),
+      monat: {
+        spanne: zeitraumSpanne('monat', schluessel),
+        ...(jeMonat.get(schluessel) ?? { summeCents: 0, anzahl: 0 }),
+      },
       erwartetCents,
       anzahl: anzahlVon(['PENDING', 'APPROVED', 'PAID']),
       stornoCents: summeVon(['CLAWBACK']),
@@ -450,11 +509,18 @@ export async function getStatusStaende(userId: string) {
 export async function getTeamProvisionen() {
   const jetzt = new Date()
   const periode = periodeVon(jetzt)
+  const monatsRaum = monatsGrenzen(monatsSchluessel(jetzt))
 
-  const [proNutzer, inPeriode] = await Promise.all([
+  const [proNutzer, imMonat, inPeriode] = await Promise.all([
     db.commission.groupBy({
       by: ['userId'],
       where: OHNE_STORNO,
+      _sum: { amountCents: true },
+      _count: true,
+    }),
+    db.commission.groupBy({
+      by: ['userId'],
+      where: { ...OHNE_STORNO, occurredAt: { gte: monatsRaum.von, lt: monatsRaum.bis } },
       _sum: { amountCents: true },
       _count: true,
     }),
@@ -471,13 +537,18 @@ export async function getTeamProvisionen() {
     select: { id: true, displayName: true, team: { select: { name: true } } },
   })
 
-  return proNutzer
-    .map((p) => ({
-      userId: p.userId,
-      anzahl: p._count,
-      summeCents: p._sum.amountCents ?? 0,
-      periodeCents: inPeriode.find((x) => x.userId === p.userId)?._sum.amountCents ?? 0,
-      user: users.find((u) => u.id === p.userId) ?? null,
-    }))
-    .sort((a, b) => b.periodeCents - a.periodeCents)
+  return {
+    monat: zeitraumStand('monat', jetzt),
+    periode: zeitraumStand('periode', jetzt),
+    zeilen: proNutzer
+      .map((p) => ({
+        userId: p.userId,
+        anzahl: p._count,
+        summeCents: p._sum.amountCents ?? 0,
+        monatCents: imMonat.find((x) => x.userId === p.userId)?._sum.amountCents ?? 0,
+        periodeCents: inPeriode.find((x) => x.userId === p.userId)?._sum.amountCents ?? 0,
+        user: users.find((u) => u.id === p.userId) ?? null,
+      }))
+      .sort((a, b) => b.periodeCents - a.periodeCents),
+  }
 }

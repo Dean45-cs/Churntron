@@ -4,13 +4,20 @@ import {
   jahresBeginn,
   monatKurz,
   monatsBeginn,
-  monatsSchluessel,
   quartalsBeginn,
   tagesBeginn,
   tagesEnde,
   tagesSchluessel,
   wochenBeginn,
 } from '@/lib/time'
+import {
+  ZEITRAUM_ARTEN,
+  zeitraumGrenzen,
+  zeitraumStand,
+  zeitraumVon,
+  type Zeitraumart,
+  type ZeitraumStand,
+} from '@/lib/zeitraum'
 
 /**
  * Verdienst-Auswertung: aus einer Liste von Buchungen die Zahlen machen, die
@@ -60,15 +67,22 @@ const TAGE_JE_MONAT = 30.4375
 
 export type Summe = { summeCents: number; anzahl: number }
 
+export type Reihe = { schluessel: string; label: string; summeCents: number; anzahl: number }
+
 export type VerdienstAuswertung = {
   zeitraeume: {
     heute: Summe
     woche: Summe
+    /** Kalendermonat, 1. bis Monatsende. */
     monat: Summe
+    /** Abrechnungszeitraum, 20. bis 20. – dieselben Tage, anderer Zuschnitt. */
+    periode: Summe
     quartal: Summe
     jahr: Summe
     gesamt: Summe
   }
+  /** Der laufende Kalendermonat und der laufende Abrechnungszeitraum, beschriftet. */
+  laufend: Record<Zeitraumart, ZeitraumStand>
   fenster: {
     art: Fenster
     von: Date
@@ -109,7 +123,8 @@ export type VerdienstAuswertung = {
     monatBruttoCents: number
     monatNettoCents: number
   }
-  jeMonat: { schluessel: string; label: string; summeCents: number; anzahl: number }[]
+  /** Zwoelf Monate Verlauf – in beiden Zuschnitten, umschaltbar in der Ansicht. */
+  verlauf: Record<Zeitraumart, Reihe[]>
   jeKategorie: { kategorie: CommissionCategory; summeCents: number; anzahl: number }[]
   top: { bezeichnung: string; summeCents: number; anzahl: number }[]
   besterTag: { tag: string; summeCents: number; anzahl: number } | null
@@ -209,19 +224,27 @@ export function werteVerdienstAus(
   ) as VerdienstAuswertung['schnittNetto']
 
   // Zwoelf Monate Verlauf, aelteste zuerst – so liest sich die Balkenreihe.
-  const jeMonatMap = new Map<string, Summe>()
+  // Einmal je Zuschnitt: derselbe Vorgang landet im Kalendermonat und im
+  // Abrechnungszeitraum, und zwischen dem 20. und dem Monatsende sind das zwei
+  // verschiedene Saeulen.
   const verlaufVon = monatsBeginn(new Date(jetzt.getTime() - 334 * TAG_MS))
-  for (const b of verdient) {
-    if (b.occurredAt < verlaufVon) continue
-    const key = monatsSchluessel(b.occurredAt)
-    const eintrag = jeMonatMap.get(key) ?? { summeCents: 0, anzahl: 0 }
-    eintrag.summeCents += b.amountCents
-    eintrag.anzahl++
-    jeMonatMap.set(key, eintrag)
-  }
-  const jeMonat = [...jeMonatMap.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([schluessel, wert]) => ({ schluessel, label: monatKurz(schluessel), ...wert }))
+  const verlauf = Object.fromEntries(
+    ZEITRAUM_ARTEN.map((art) => {
+      const map = new Map<string, Summe>()
+      for (const b of verdient) {
+        if (b.occurredAt < verlaufVon) continue
+        const key = zeitraumVon(art, b.occurredAt)
+        const eintrag = map.get(key) ?? { summeCents: 0, anzahl: 0 }
+        eintrag.summeCents += b.amountCents
+        eintrag.anzahl++
+        map.set(key, eintrag)
+      }
+      const reihe: Reihe[] = [...map.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([schluessel, wert]) => ({ schluessel, label: monatKurz(schluessel), ...wert }))
+      return [art, reihe]
+    }),
+  ) as Record<Zeitraumart, Reihe[]>
 
   const jeKategorieMap = new Map<CommissionCategory, Summe>()
   for (const b of imFenster) {
@@ -244,17 +267,26 @@ export function werteVerdienstAus(
     ([, a], [, b]) => b.summeCents - a.summeCents,
   )[0]
 
+  const laufendePeriode = zeitraumGrenzen('periode', zeitraumVon('periode', jetzt))
+
   return {
     zeitraeume: {
       heute: summiere(verdient, tagesBeginn(jetzt)),
       woche: summiere(verdient, wochenBeginn(jetzt)),
       monat: summiere(verdient, monatsBeginn(jetzt)),
+      // Der Abrechnungszeitraum beginnt im Vormonat: seine Obergrenze bleibt
+      // stehen, damit eine Buchung ab dem 20. schon zum naechsten zaehlt.
+      periode: summiere(verdient, laufendePeriode.von, laufendePeriode.bis),
       quartal: summiere(verdient, quartalsBeginn(jetzt)),
       jahr: summiere(verdient, jahresBeginn(jetzt)),
       gesamt: {
         summeCents: verdient.reduce((s, b) => s + b.amountCents, 0),
         anzahl: verdient.length,
       },
+    },
+    laufend: {
+      monat: zeitraumStand('monat', jetzt),
+      periode: zeitraumStand('periode', jetzt),
     },
     fenster: {
       art,
@@ -276,7 +308,7 @@ export function werteVerdienstAus(
       monatBruttoCents: Math.round(proMonat),
       monatNettoCents: schnittNetto.proMonat,
     },
-    jeMonat,
+    verlauf,
     jeKategorie: [...jeKategorieMap.entries()]
       .map(([kategorie, wert]) => ({ kategorie, ...wert }))
       .sort((a, b) => b.summeCents - a.summeCents),
