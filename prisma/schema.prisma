@@ -1,0 +1,414 @@
+// Churntron – Datenmodell
+//
+// GRUNDREGEL: In dieser Datenbank stehen KEINE Klardaten von Kundinnen und Kunden.
+// Kein Name, keine Adresse, keine Telefonnummer, keine E-Mail-Adresse.
+// Der Bezug zum Kunden laeuft ausschliesslich ueber Contract.externalRef
+// (Vertrags- bzw. Kundennummer). Die Klardaten bleiben im lokalen Kampagnen-Lookup.
+// Der Test in src/lib/__tests__/schema-privacy.test.ts haelt diese Regel fest.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  REP
+  ADMIN
+}
+
+enum ContractStatus {
+  ACTIVE
+  CANCELLED
+  REVOKED
+  WON_BACK
+  LOST
+}
+
+enum CancelReason {
+  PRICE
+  SERVICE
+  MOVE
+  COMPETITOR
+  TECHNICAL
+  TERM
+  OTHER
+  UNKNOWN
+}
+
+enum ActivityType {
+  CALL
+  EMAIL
+  OFFER
+  NOTE
+}
+
+enum ActivityOutcome {
+  REACHED
+  NOT_REACHED
+  CALLBACK
+  WON
+  LOST
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  CLAWBACK
+}
+
+/// Abschnitte des Provisionskatalogs. Sie tragen die Gruppierung der
+/// Tracker-Buttons und die Aufteilung in der Verdienst-Auswertung.
+enum CommissionCategory {
+  SALE_PRIVATE
+  SALE_BUSINESS
+  ADDON
+  TARIFF_CHANGE
+  CAMPAIGN
+}
+
+enum ChallengeMetric {
+  CONTRACTS_WON
+  CHURN_SAVED
+  CALLS_DONE
+  POINTS
+}
+
+/// Themen der Einwand-Wiki. Sie tragen die Schnellfilter ueber der Suche und
+/// stehen an jedem Treffer, damit im Gespraech sofort klar ist, worum es geht.
+enum ObjectionCategory {
+  PRICE
+  COMPETITOR
+  TECHNICAL
+  CONSTRUCTION
+  SERVICE
+  TIMING
+  NEED
+  DECISION
+  CONTRACT
+  TRUST
+  OTHER
+}
+
+enum SourceKind {
+  EXCEL
+  LOOKUP_CSV
+  DYNAMICS
+  SEED
+}
+
+model Team {
+  id      String @id @default(cuid())
+  name    String @unique
+  members User[]
+}
+
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  displayName  String
+  passwordHash String
+  role         Role    @default(REP)
+  teamId       String?
+  team         Team?   @relation(fields: [teamId], references: [id])
+
+  /// Freiwillige Profilangaben. Das sind Beschaeftigtendaten und keine
+  /// Kundendaten – die Grundregel im Kopf dieser Datei bleibt unberuehrt.
+  /// Beides darf leer bleiben und laesst sich jederzeit wieder leeren.
+  jobTitle String?
+  about    String?
+
+  /// Wer das Haus verlaesst, wird deaktiviert und nicht geloescht: an den
+  /// Buchungen haengt die Abrechnung, und die muss nachvollziehbar bleiben.
+  active      Boolean   @default(true)
+  /// Nur der Zeitpunkt der letzten Anmeldung, damit Admins tote Konten finden.
+  /// Bewusst KEIN Verlauf – wer wann wie lange am Werkzeug sass, wird hier
+  /// nicht gespeichert (siehe DEPLOY.md, Mitbestimmung).
+  lastLoginAt DateTime?
+
+  avatar UserAvatar?
+
+  contracts    Contract[]
+  activities   ChurnActivity[]
+  commissions  Commission[]
+  payouts      CommissionPayout[]
+  settings     UserSettings?
+  pointsEvents PointsEvent[]
+  imports      ImportBatch[]
+  objections   Objection[]
+
+  createdAt DateTime @default(now())
+}
+
+/// Das Profilbild, direkt in der Datenbank.
+///
+/// Eigene Tabelle und nicht ein Feld an User: die Bytes sollen nicht bei jeder
+/// Nutzerabfrage mitgelesen werden, gebraucht werden sie allein von der
+/// Bild-Route. Ein eigener Speicherdienst (S3, Vercel Blob) waere fuer ein
+/// Team dieser Groesse ein weiterer Anbieter samt Auftragsverarbeitung –
+/// nach dem Verkleinern im Browser sind es rund 30 KB je Person.
+model UserAvatar {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  data     Bytes
+  /// Aus den Magic Bytes bestimmt, nicht aus der Angabe des Browsers –
+  /// siehe src/lib/avatar.ts. Unter genau diesem Typ geht das Bild wieder raus.
+  mimeType String
+  /// Wechselt mit jedem neuen Bild und steht als Parameter in der Bild-URL.
+  /// Deshalb darf der Browser das Bild dauerhaft behalten und sieht trotzdem
+  /// sofort das neue.
+  version String
+
+  updatedAt DateTime @updatedAt
+}
+
+model Contract {
+  /// Vertrags- oder Kundennummer aus der Excel-Liste. Kein Klarname!
+  id           String         @id @default(cuid())
+  externalRef  String         @unique
+  customerRef  String?
+  product      String?
+  status       ContractStatus @default(ACTIVE)
+  cancelReason CancelReason?
+  /// Originaltext des Kuendigungsgrundes aus der Liste, fuer spaetere Auswertung
+  reasonRaw    String?
+  monthlyCents Int?
+  cancelledAt  DateTime?
+  revokedAt    DateTime?
+  /// Empfohlener Wiedervorlage-Zeitpunkt (Kuendigung + 60-90 Tage)
+  reactivateAt DateTime?
+
+  ownerId String?
+  owner   User?   @relation(fields: [ownerId], references: [id])
+
+  source        SourceKind
+  importBatchId String?
+  importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id])
+
+  activities   ChurnActivity[]
+  commissions  Commission[]
+  pointsEvents PointsEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, cancelReason])
+  @@index([reactivateAt])
+}
+
+model ChurnActivity {
+  id         String           @id @default(cuid())
+  contractId String
+  contract   Contract         @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User             @relation(fields: [userId], references: [id])
+  type       ActivityType
+  outcome    ActivityOutcome?
+  note       String?
+  createdAt  DateTime         @default(now())
+
+  @@index([contractId, createdAt])
+}
+
+model CommissionRule {
+  id           String             @id @default(cuid())
+  /// Stabiler Schluessel aus src/lib/commission-catalog.ts. Die Tracker-Buttons
+  /// und alle gebuchten Positionen haengen daran – nicht umbenennen.
+  key          String             @unique
+  name         String
+  category     CommissionCategory
+  /// Zusatzbedingung, die den Satz bestimmt, z. B. "Restlaufzeit < 3 Monate".
+  variant      String?
+  hint         String?
+  product      String?
+  /// Entweder Fixbetrag ODER Prozentsatz. Der Katalog kennt bisher nur
+  /// Fixbetraege; der Prozentsatz bleibt fuer spaetere Staffeln offen.
+  amountCents  Int?
+  percent      Decimal?           @db.Decimal(5, 2)
+  clawbackDays Int                @default(180)
+  sortOrder    Int                @default(0)
+  active       Boolean            @default(true)
+  validFrom    DateTime
+  validTo      DateTime?
+
+  commissions Commission[]
+
+  @@index([category, sortOrder])
+}
+
+model Commission {
+  /// Eine gebuchte Provisionsposition. Im Tracker entsteht sie mit einem Tastendruck,
+  /// deshalb ist der Vertrag optional: die Vertragsnummer wird nachgetragen, wenn
+  /// sie zur Hand ist, und blockiert das schnelle Buchen nicht.
+  id          String          @id @default(cuid())
+  contractId  String?
+  contract    Contract?       @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  /// Vertrags- oder Kundennummer als Freitext, wenn der Vertrag noch nicht in der
+  /// Datenbank steht. Kein Klarname – siehe Kopf dieser Datei.
+  externalRef String?
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  ruleId      String?
+  rule        CommissionRule? @relation(fields: [ruleId], references: [id])
+
+  amountCents Int
+  status      CommissionStatus @default(PENDING)
+  /// Abrechnungsperiode im Format "2026-09". Sie laeuft vom 20.08. bis zum 19.09.
+  /// und wird aus occurredAt abgeleitet – siehe src/lib/period.ts.
+  periodMonth String
+  /// Zeitpunkt des Vorgangs. Er entscheidet ueber die Periode und traegt die
+  /// gesamte Verdienst-Auswertung (Tag, Woche, Monat, Quartal, Jahr).
+  occurredAt  DateTime         @default(now())
+  note        String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, periodMonth, status])
+  @@index([userId, occurredAt])
+  @@index([status])
+}
+
+/// Was tatsaechlich auf dem Konto ankam. Der Abgleich stellt diesen Betrag der
+/// Summe der gebuchten Positionen einer Periode gegenueber.
+model CommissionPayout {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Periodenschluessel wie in Commission.periodMonth, z. B. "2026-09".
+  periodKey String
+  paidCents Int
+  paidOn    DateTime?
+  note      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, periodKey])
+}
+
+/// Angaben, die nur die eigene Auswertung betreffen: Wochenstunden fuer den
+/// Stundenschnitt und die Steuermerkmale fuer den Brutto-Netto-Rechner.
+/// Bewusst pro Nutzer und nicht global – Steuerklasse ist nichts fuers Team.
+model UserSettings {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Sekunden zwischen zwei stillen Aktualisierungen der Oberflaeche.
+  /// 0 schaltet sie ab. Siehe src/components/layout/auto-refresh.tsx.
+  autoRefreshSeconds Int @default(30)
+
+  weeklyHours     Decimal @default(40) @db.Decimal(4, 1)
+  workDaysPerWeek Int     @default(5)
+  /// Monatliches Grundgehalt in Cent. Der Rechner legt die Provision oben drauf,
+  /// weil nur der Aufschlag zaehlt – der Steuersatz haengt am Gesamteinkommen.
+  baseSalaryCents Int     @default(0)
+
+  taxClass          Int     @default(1)
+  /// 0, 8 oder 9 Prozent. Schleswig-Holstein liegt bei 9.
+  churchTaxPercent  Int     @default(0)
+  childAllowances   Decimal @default(0) @db.Decimal(3, 1)
+  children          Int     @default(0)
+  /// KV-Zusatzbeitrag der Krankenkasse in Basispunkten: 290 = 2,90 Prozent.
+  healthExtraRateBp Int     @default(290)
+  taxYear           Int     @default(2026)
+
+  updatedAt DateTime @updatedAt
+}
+
+model Challenge {
+  id          String          @id @default(cuid())
+  title       String
+  description String?
+  metric      ChallengeMetric
+  target      Int
+  startsAt    DateTime
+  endsAt      DateTime
+  createdById String
+
+  pointsEvents PointsEvent[]
+
+  @@index([startsAt, endsAt])
+}
+
+model PointsEvent {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  contractId  String?
+  contract    Contract?  @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  challengeId String?
+  challenge   Challenge? @relation(fields: [challengeId], references: [id], onDelete: SetNull)
+
+  /// z.B. "contract_won", "churn_saved", "call_done"
+  kind       String
+  points     Int
+  occurredAt DateTime @default(now())
+
+  @@index([userId, occurredAt])
+  @@index([challengeId, occurredAt])
+}
+
+/// Ein Eintrag der Einwand-Wiki: der Einwand im Wortlaut des Kunden und die
+/// Antwort, die im Telefonat funktioniert.
+///
+/// Auch hier gilt die Grundregel: KEINE Klardaten. In der Wiki steht, WAS
+/// Kundinnen und Kunden sagen – nie, wer es gesagt hat. Ein Eintrag ist eine
+/// Formulierungshilfe, kein Gespraechsprotokoll, und haengt deshalb bewusst an
+/// keinem Vertrag.
+model Objection {
+  id String @id @default(cuid())
+  /// Stabiler Schluessel der Eintraege aus dem Startbestand
+  /// (src/lib/objection-catalog.ts). Selbst angelegte Eintraege haben keinen –
+  /// so weiss der Seed, was von ihm stammt, und laesst alles andere in Ruhe.
+  key String? @unique
+
+  title    String
+  category ObjectionCategory
+  /// Andere Formulierungen desselben Einwands. Sie sind das Herz der Suche:
+  /// getippt wird, was der Kunde gerade gesagt hat, nicht die Ueberschrift.
+  variants String[]
+  /// Die Einwandbehandlung – der Text, der im Gespraech gebraucht wird.
+  answer   String
+  /// Die Rueckfrage, die das Gespraech danach weitertraegt.
+  followUp String?
+  tags     String[]
+
+  /// Wie oft der Eintrag im Gespraech geholfen hat. Ordnet gleich gute Treffer:
+  /// was sich bewaehrt hat, steht oben.
+  helpful  Int     @default(0)
+  /// Ueberholte Eintraege verschwinden aus der Suche, statt geloescht zu werden –
+  /// eine Formulierung, die nicht mehr passt, ist trotzdem Teil der Geschichte.
+  archived Boolean @default(false)
+  /// Hat jemand den Text angefasst? Dann gehoert der Eintrag dem Team, und der
+  /// Seed laesst ihn in Ruhe. Solange das hier false ist, darf er einen
+  /// Starteintrag (mit `key`) aus dem Katalog auffrischen – nur so kommt eine
+  /// verbesserte Formulierung noch in eine bereits befuellte Datenbank.
+  /// „Hat geholfen" und das Archivieren zaehlen nicht als Anfassen.
+  edited   Boolean @default(false)
+
+  authorId String?
+  author   User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([archived, category])
+}
+
+model ImportBatch {
+  id       String @id @default(cuid())
+  filename String
+  rowCount Int
+  /// Erkannte Spaltenzuordnung – macht jeden Import nachvollziehbar
+  mapping  Json
+
+  importedById String
+  importedBy   User   @relation(fields: [importedById], references: [id])
+
+  contracts Contract[]
+  createdAt DateTime   @default(now())
+}
