@@ -32,12 +32,10 @@ export function AbgleichPanel({
   stand,
   gruppen,
   positionen,
-  zeitraum,
 }: {
   stand: PeriodenStand
   gruppen: Gruppe[]
   positionen: PeriodenPosition[]
-  zeitraum: string
 }) {
   const [hinweis, setHinweis] = useState<{ ok: boolean; text: string } | null>(null)
   const [pending, startTransition] = useTransition()
@@ -74,8 +72,9 @@ export function AbgleichPanel({
         <CardHeader className="border-border border-b pb-4">
           <CardTitle>Auszahlung prüfen</CardTitle>
           <CardDescription>
-            Periode {zeitraum} · voraussichtliche Auszahlung am{' '}
-            <span className="tabular font-mono">{stand.auszahlungAmText}</span>
+            {stand.name} · Abrechnungszeitraum{' '}
+            <span className="tabular font-mono">{stand.zeitraum}</span> · voraussichtliche
+            Auszahlung am <span className="tabular font-mono">{stand.auszahlungAmText}</span>
           </CardDescription>
         </CardHeader>
 
@@ -136,7 +135,7 @@ export function AbgleichPanel({
           </form>
 
           <div className="border-border flex flex-col gap-2 rounded-2xl border p-5">
-            <Zeile label="Gebucht" wert={formatEuro(stand.erwartetCents)} />
+            <Zeile label="Gebucht im Abrechnungszeitraum" wert={formatEuro(stand.erwartetCents)} />
             <Zeile
               label="Ausgezahlt"
               wert={stand.ausgezahltCents === null ? '—' : formatEuro(stand.ausgezahltCents)}
@@ -166,6 +165,17 @@ export function AbgleichPanel({
                   {formatEuro(stand.stornoCents)} storniert – nicht mitgerechnet.
                 </p>
               ) : null}
+            </div>
+
+            {/* Zum Vergleich, nicht zum Abgleich: die Abrechnung nennt den
+                Zeitraum vom 20. zum 20., im Kopf hat man den Kalendermonat. */}
+            <div className="border-border mt-1 border-t pt-3">
+              <Zeile label="Kalendermonat" wert={formatEuro(stand.monat.summeCents)} />
+              <p className="text-muted-foreground mt-1 text-xs">
+                <span className="tabular font-mono">{stand.monat.spanne}</span> ·{' '}
+                {stand.monat.anzahl} Vorgänge – zum Vergleich, ausgezahlt wird der
+                Abrechnungszeitraum.
+              </p>
             </div>
           </div>
         </div>

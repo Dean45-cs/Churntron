@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { auth } from '@/lib/auth'
+import { nutzerOderAnmeldung } from '@/lib/session'
 import { devDelay } from '@/lib/dev'
 import { getPeriodenGruppen, getPeriodenPositionen, getPeriodenStaende } from '@/lib/queries'
 import { AUSZAHLUNG_VERZUG_MONATE, STICHTAG } from '@/lib/period'
@@ -11,7 +11,7 @@ import { AbgleichSkeleton } from '@/components/skeletons/abgleich-skeleton'
 import { TableSkeleton } from '@/components/skeletons/table-skeleton'
 import { AbgleichPanel } from './abgleich-panel'
 
-const PERIODEN_WIDTHS = ['w-28', 'w-36', 'w-24', 'w-24', 'w-20', 'w-24']
+const PERIODEN_WIDTHS = ['w-28', 'w-36', 'w-24', 'w-24', 'w-24', 'w-20', 'w-24']
 
 /**
  * Die Ueberpruefung: eingeben, was ausgezahlt wurde, und gegen die eigenen
@@ -23,7 +23,7 @@ export default async function AbgleichPage({
 }: {
   searchParams: Promise<{ periode?: string }>
 }) {
-  const session = await auth()
+  const nutzer = await nutzerOderAnmeldung()
   const wunsch = (await searchParams).periode
 
   return (
@@ -32,26 +32,29 @@ export default async function AbgleichPage({
         <CardHeader>
           <CardTitle>So läuft die Abrechnung</CardTitle>
           <CardDescription>
-            Eine Provisionsperiode läuft vom {STICHTAG}. eines Monats bis zum {STICHTAG - 1}. des
+            Ein Abrechnungszeitraum läuft vom {STICHTAG}. eines Monats bis zum {STICHTAG - 1}. des
             Folgemonats und wird{' '}
             {AUSZAHLUNG_VERZUG_MONATE === 1
               ? 'eine Abrechnung'
               : `${AUSZAHLUNG_VERZUG_MONATE} Abrechnungen`}{' '}
             später ausgezahlt – „die Provision aus dem Monat davor, immer vom {STICHTAG}. zum{' '}
-            {STICHTAG}.“. Stimmt der ausgezahlte Betrag mit den gebuchten Positionen überein, sind
-            sie mit einem Klick erledigt. Weicht er ab, bleibt alles offen, bis klar ist, welche
-            Position fehlt.
+            {STICHTAG}.“. Abgerechnet wird danach, gearbeitet wird im Kalendermonat: deshalb steht
+            er in der Tabelle daneben. Was zwischen dem {STICHTAG}. und dem Monatsende gebucht wird,
+            zählt schon zum nächsten Abrechnungszeitraum – genau das ist der Unterschied zwischen
+            den beiden Spalten. Stimmt der ausgezahlte Betrag mit den gebuchten Positionen überein,
+            sind sie mit einem Klick erledigt. Weicht er ab, bleibt alles offen, bis klar ist,
+            welche Position fehlt.
           </CardDescription>
         </CardHeader>
       </Card>
 
       <Suspense fallback={<TableSkeleton rows={6} widths={PERIODEN_WIDTHS} />}>
-        <PeriodenTabelle userId={session!.user.id} gewaehlt={wunsch} />
+        <PeriodenTabelle userId={nutzer.id} gewaehlt={wunsch} />
       </Suspense>
 
       <div className="mt-6">
         <Suspense key={wunsch ?? 'aktuell'} fallback={<AbgleichSkeleton />}>
-          <Detail userId={session!.user.id} gewaehlt={wunsch} />
+          <Detail userId={nutzer.id} gewaehlt={wunsch} />
         </Suspense>
       </div>
     </>
@@ -72,16 +75,20 @@ async function PeriodenTabelle({ userId, gewaehlt }: { userId: string; gewaehlt?
   return (
     <Card className="overflow-hidden">
       <CardHeader className="border-border border-b pb-4">
-        <CardTitle>Die letzten Perioden</CardTitle>
-        <CardDescription>Zum Prüfen eine Zeile auswählen.</CardDescription>
+        <CardTitle>Die letzten Abrechnungszeiträume</CardTitle>
+        <CardDescription>
+          Zum Prüfen eine Zeile auswählen. „Gebucht“ ist der Abrechnungszeitraum – die Spalte
+          daneben zeigt denselben Monat vom 1. bis zum Monatsende.
+        </CardDescription>
       </CardHeader>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/40 text-muted-foreground border-border border-b text-xs">
             <tr>
-              <th className="px-6 py-3 text-left font-semibold">Periode</th>
-              <th className="px-6 py-3 text-left font-semibold">Zeitraum</th>
+              <th className="px-6 py-3 text-left font-semibold">Monat</th>
+              <th className="px-6 py-3 text-left font-semibold">Abrechnungszeitraum</th>
               <th className="px-6 py-3 text-right font-semibold">Gebucht</th>
+              <th className="px-6 py-3 text-right font-semibold">Kalendermonat</th>
               <th className="px-6 py-3 text-right font-semibold">Ausgezahlt</th>
               <th className="px-6 py-3 text-right font-semibold">Differenz</th>
               <th className="px-6 py-3 text-left font-semibold">Stand</th>
@@ -109,6 +116,12 @@ async function PeriodenTabelle({ userId, gewaehlt }: { userId: string; gewaehlt?
                 </td>
                 <td className="tabular px-6 py-3 text-right font-mono font-semibold">
                   {formatEuro(s.erwartetCents)}
+                </td>
+                <td
+                  className="text-muted-foreground tabular px-6 py-3 text-right font-mono"
+                  title={`Kalendermonat ${s.monat.spanne}: ${s.monat.anzahl} Vorgänge`}
+                >
+                  {formatEuro(s.monat.summeCents)}
                 </td>
                 <td className="tabular px-6 py-3 text-right font-mono">
                   {s.ausgezahltCents === null ? '—' : formatEuro(s.ausgezahltCents)}
@@ -153,12 +166,5 @@ async function Detail({ userId, gewaehlt }: { userId: string; gewaehlt?: string 
     getPeriodenPositionen(userId, stand.schluessel),
   ])
 
-  return (
-    <AbgleichPanel
-      stand={stand}
-      gruppen={gruppen}
-      positionen={positionen}
-      zeitraum={`${stand.name} (${stand.zeitraum})`}
-    />
-  )
+  return <AbgleichPanel stand={stand} gruppen={gruppen} positionen={positionen} />
 }

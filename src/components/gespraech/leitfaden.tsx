@@ -1,13 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
-import {
-  ChevronLeft,
-  ChevronRight,
-  MessageSquareQuote,
-  ShieldAlert,
-  SquareArrowOutUpRight,
-} from 'lucide-react'
+import Link from 'next/link'
+import { ChevronLeft, ChevronRight, ShieldAlert, SquareArrowOutUpRight } from 'lucide-react'
 import { ERSTE_GESPRAECHSPHASE, LEITFADEN, type Block, type Phase } from '@/lib/leitfaden'
 import { SCHLUESSEL, abonniere, lies, schreibe } from '@/lib/gespraech-speicher'
 import { Badge } from '@/components/ui/badge'
@@ -26,11 +21,21 @@ import { cn } from '@/lib/utils'
  * Die Leitregel: das Werkzeug hilft, es erzeugt keine Arbeit. Es wird nichts
  * protokolliert, nichts abgehakt, nichts gespeichert ausser der Stelle, an der
  * man gerade steht – und die merkt es sich von selbst.
+ *
+ * Zum Verhaeltnis zur Einwand-Wiki: Phase 7 zeigt die fuenf Einwaende, die im
+ * Leitfaden stehen – im Wortlaut, wie alles andere hier auch. Die gepflegte
+ * Sammlung ist das aber nicht, die steht in der Wiki und waechst dort. Der
+ * Leitfaden fuehrt deshalb dorthin, statt eine zweite Suche danebenzustellen:
+ * waehrend eines Telefonats darf es fuer einen Einwand nur eine Anlaufstelle
+ * geben.
  */
 
-type Reiter = 'phasen' | 'einwaende'
-
 const LETZTE_PHASE = LEITFADEN.phasen.length - 1
+
+/** Wo die Einwaende stehen – aus den Daten gelesen, nicht als 7 hingeschrieben. */
+const EINWAND_PHASE =
+  LEITFADEN.phasen.find((p) => p.bloecke.some((b) => b.art === 'einwaende'))?.nr ??
+  ERSTE_GESPRAECHSPHASE
 
 /** Was im Speicher steht, kommt aus dem Browser – also nachrechnen. */
 function alsPhase(roh: string) {
@@ -62,26 +67,15 @@ export function Leitfaden({
     ),
   )
 
-  const reiter: Reiter =
-    useSyncExternalStore(
-      abonniere,
-      () => lies('sitzung', SCHLUESSEL.reiter, 'phasen'),
-      () => 'phasen',
-    ) === 'einwaende'
-      ? 'einwaende'
-      : 'phasen'
-
   const geheZu = useCallback((ziel: number) => {
     schreibe('sitzung', SCHLUESSEL.phase, String(Math.min(Math.max(ziel, 0), LETZTE_PHASE)))
-    schreibe('sitzung', SCHLUESSEL.reiter, 'phasen')
   }, [])
 
-  const wechsleReiter = useCallback((ziel: Reiter) => {
-    schreibe('sitzung', SCHLUESSEL.reiter, ziel)
-  }, [])
+  // Beim Telefonieren ist eine Hand am Hoerer. Pfeiltasten blaettern, "e"
+  // springt zu den Einwaenden – und noch einmal gedrueckt wieder zurueck, weil
+  // man sonst die Stelle verliert, an der das Gespraech unterbrochen wurde.
+  const vorEinwand = useRef(ERSTE_GESPRAECHSPHASE)
 
-  // Beim Telefonieren ist eine Hand am Hoerer. Pfeiltasten blaettern, "e" holt
-  // die Einwaende und bringt einen wieder zurueck.
   useEffect(() => {
     if (!tastaturAktiv) return
 
@@ -94,7 +88,11 @@ export function Leitfaden({
       if (e.key === 'ArrowRight') geheZu(nr + 1)
       else if (e.key === 'ArrowLeft') geheZu(nr - 1)
       else if (e.key === 'e' || e.key === 'E') {
-        wechsleReiter(reiter === 'einwaende' ? 'phasen' : 'einwaende')
+        if (nr === EINWAND_PHASE) geheZu(vorEinwand.current)
+        else {
+          vorEinwand.current = nr
+          geheZu(EINWAND_PHASE)
+        }
       } else return
 
       e.preventDefault()
@@ -102,7 +100,7 @@ export function Leitfaden({
 
     window.addEventListener('keydown', beiTaste)
     return () => window.removeEventListener('keydown', beiTaste)
-  }, [tastaturAktiv, nr, reiter, geheZu, wechsleReiter])
+  }, [tastaturAktiv, nr, geheZu])
 
   const phase = LEITFADEN.phasen[nr] ?? LEITFADEN.phasen[ERSTE_GESPRAECHSPHASE]
 
@@ -116,7 +114,7 @@ export function Leitfaden({
   return (
     <div className="@container flex h-full min-h-0 flex-col">
       {/* --- Kopf: Titel und die zwei Reiter ------------------------------- */}
-      <div className="border-border shrink-0 border-b px-4 pt-4 pb-0 @2xl:px-6">
+      <div className="border-border shrink-0 border-b px-4 py-3.5 @2xl:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-base leading-tight font-semibold @2xl:text-lg">
@@ -139,56 +137,24 @@ export function Leitfaden({
             {kopfAktion}
           </div>
         </div>
-
-        <div className="mt-3 flex gap-1" role="tablist" aria-label="Bereiche des Leitfadens">
-          {(
-            [
-              ['phasen', 'Phasen', null],
-              ['einwaende', 'Einwände', MessageSquareQuote],
-            ] as const
-          ).map(([wert, beschriftung, Icon]) => (
-            <button
-              key={wert}
-              type="button"
-              role="tab"
-              aria-selected={reiter === wert}
-              onClick={() => wechsleReiter(wert)}
-              className={cn(
-                'flex items-center gap-1.5 rounded-t-xl border-b-2 px-3.5 py-2 text-sm font-medium transition-colors',
-                reiter === wert
-                  ? 'border-primary text-primary'
-                  : 'text-muted-foreground hover:text-foreground border-transparent',
-              )}
-            >
-              {Icon ? <Icon className="size-4" /> : null}
-              {beschriftung}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* --- Mitte: Phasen oder Einwaende ---------------------------------- */}
-      {reiter === 'einwaende' ? (
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 @2xl:px-6">
-          <EinwandListe />
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)] @2xl:grid-cols-[13.5rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]">
+        <div className="border-border bg-muted/30 flex min-h-0 flex-col border-b @2xl:overflow-y-auto @2xl:border-r @2xl:border-b-0">
+          <PhasenLeiste nr={nr} geheZu={geheZu} />
+          <Weiterentwicklung />
         </div>
-      ) : (
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)] @2xl:grid-cols-[13.5rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]">
-          <div className="border-border bg-muted/30 flex min-h-0 flex-col border-b @2xl:overflow-y-auto @2xl:border-r @2xl:border-b-0">
-            <PhasenLeiste nr={nr} geheZu={geheZu} />
-            <Weiterentwicklung />
-          </div>
 
-          <div className="min-h-0 overflow-y-auto px-4 py-4 @2xl:px-6 @2xl:py-5">
-            <PhasenKopf phase={phase} />
-            <div className="mt-4 flex flex-col gap-4">
-              {phase.bloecke.map((block, i) => (
-                <BlockAnsicht key={i} block={block} />
-              ))}
-            </div>
+        <div className="min-h-0 overflow-y-auto px-4 py-4 @2xl:px-6 @2xl:py-5">
+          <PhasenKopf phase={phase} />
+          <div className="mt-4 flex flex-col gap-4">
+            {phase.bloecke.map((block, i) => (
+              <BlockAnsicht key={i} block={block} imFenster={imFenster} />
+            ))}
           </div>
         </div>
-      )}
+      </div>
 
       <Leitplanken />
     </div>
@@ -292,7 +258,7 @@ function PhasenKopf({ phase }: { phase: Phase }) {
   )
 }
 
-function BlockAnsicht({ block }: { block: Block }) {
+function BlockAnsicht({ block, imFenster }: { block: Block; imFenster: boolean }) {
   switch (block.art) {
     case 'text':
       return (
@@ -372,7 +338,7 @@ function BlockAnsicht({ block }: { block: Block }) {
       )
 
     case 'einwaende':
-      return <EinwandListe />
+      return <EinwandListe imFenster={imFenster} />
 
     case 'luecke':
       return (
@@ -387,25 +353,43 @@ function BlockAnsicht({ block }: { block: Block }) {
 }
 
 /**
- * Die Einwaende. Sie stehen einmal in leitfaden.ts und erscheinen zweimal:
- * in Phase 7 und im eigenen Reiter. Der Reiter ist der wichtigere Weg – der
- * Kunde bringt einen Einwand, wann er will, nicht wenn das Skript so weit ist.
+ * Die fuenf Einwaende, die im Leitfaden stehen – nicht mehr und nicht weniger.
+ * Die gepflegte Sammlung ist die Einwand-Wiki; darauf verweist der Fuss dieser
+ * Liste. Eine zweite Suche daneben waere im Gespraech genau die Stelle, an der
+ * man zu lange sucht.
  */
-function EinwandListe() {
+function EinwandListe({ imFenster }: { imFenster: boolean }) {
   return (
-    <ul className="flex flex-col gap-2.5">
-      {LEITFADEN.einwaende.map((e) => (
-        <li key={e.einwand} className="border-border overflow-hidden rounded-xl border">
-          <p className="bg-muted/50 border-border border-b px-3 py-2 text-sm font-semibold">
-            &bdquo;{e.einwand}&ldquo;
-          </p>
-          <p className="px-3 py-2.5 text-sm leading-relaxed">&bdquo;{e.antwort}&ldquo;</p>
-          {e.hinweis ? (
-            <p className="text-muted-foreground px-3 pb-2 text-xs">{e.hinweis}</p>
-          ) : null}
-        </li>
-      ))}
-    </ul>
+    <div>
+      <ul className="flex flex-col gap-2.5">
+        {LEITFADEN.einwaende.map((e) => (
+          <li key={e.einwand} className="border-border overflow-hidden rounded-xl border">
+            <p className="bg-muted/50 border-border border-b px-3 py-2 text-sm font-semibold">
+              &bdquo;{e.einwand}&ldquo;
+            </p>
+            <p className="px-3 py-2.5 text-sm leading-relaxed">&bdquo;{e.antwort}&ldquo;</p>
+            {e.hinweis ? (
+              <p className="text-muted-foreground px-3 pb-2 text-xs">{e.hinweis}</p>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+
+      <p className="text-muted-foreground mt-3 text-xs leading-relaxed">
+        Das sind die fünf aus dem Leitfaden. Gesammelt und durchsuchbar stehen die
+        Einwandbehandlungen im{' '}
+        <Link
+          href="/dashboard/wiki"
+          // Aus dem schmalen Fenster heraus nicht im Fenster selbst: die Wiki
+          // braucht Platz, und der Leitfaden soll daneben stehen bleiben.
+          target={imFenster ? '_blank' : undefined}
+          className="text-primary font-semibold underline underline-offset-2"
+        >
+          Einwand-Wiki
+        </Link>
+        .
+      </p>
+    </div>
   )
 }
 

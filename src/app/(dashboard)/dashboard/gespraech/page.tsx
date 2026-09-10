@@ -17,7 +17,7 @@ export default function GespraechPage() {
     <>
       <PageHeader
         title="Gespräch"
-        description={`${LEITFADEN.titel} · ${LEITFADEN.einsatz}. Pfeiltasten blättern durch die Phasen, „e“ holt die Einwände.`}
+        description={`${LEITFADEN.titel} · ${LEITFADEN.einsatz}. Pfeiltasten blättern durch die Phasen, „e“ springt zu den Einwänden und zurück.`}
       />
 
       <Card className="h-[calc(100dvh-14rem)] min-h-[34rem] overflow-hidden">

@@ -2,26 +2,38 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCardSkeleton } from '@/components/skeletons/stat-card-skeleton'
 import { TableSkeleton } from '@/components/skeletons/table-skeleton'
+import { ZeitraumVergleichSkeleton } from '@/components/skeletons/zeitraum-vergleich-skeleton'
 
 const SCHNITT_WIDTHS = ['w-28', 'w-20', 'w-20', 'w-40']
 
-/** Formgleich zur Auswertung: fuenf Kacheln, Schnitt-Tabelle, zwei Diagramme. */
+/**
+ * Formgleich zur Auswertung: vier Kacheln, die Gegenueberstellung von
+ * Kalendermonat und Abrechnungszeitraum, Schnitt-Tabelle, zwei Diagramme.
+ */
 export function VerdienstSkeleton() {
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
           <StatCardSkeleton key={i} />
         ))}
       </div>
+
+      <ZeitraumVergleichSkeleton />
 
       <TableSkeleton rows={8} widths={SCHNITT_WIDTHS} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <div className="flex flex-col gap-2 px-6 pt-6 pb-3">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-3 w-56" />
+          <div className="flex flex-wrap items-start justify-between gap-3 px-6 pt-6 pb-3">
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3 w-56" />
+            </div>
+            <div className="flex gap-1">
+              <Skeleton className="h-7 w-16 rounded-lg" />
+              <Skeleton className="h-7 w-20 rounded-lg" />
+            </div>
           </div>
           <div className="flex h-44 items-end gap-2 px-6 pb-6">
             {[

@@ -1,5 +1,6 @@
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 
 /**
  * Formgleich zu <StatCard/>: gleiche Kartenhoehe (116px), gleiche Abstaende,
@@ -16,9 +17,25 @@ export function StatCardSkeleton() {
   )
 }
 
-export function StatCardGridSkeleton({ count = 4 }: { count?: number }) {
+/**
+ * Die Rasterklassen stehen ausgeschrieben, nicht zusammengesetzt: Tailwind
+ * liest die Klassennamen aus dem Quelltext, ein `lg:grid-cols-${n}` waere im
+ * fertigen Stylesheet nicht enthalten.
+ */
+const SPALTEN: Record<number, string> = {
+  3: 'sm:grid-cols-2 lg:grid-cols-3',
+  4: 'sm:grid-cols-2 lg:grid-cols-4',
+}
+
+export function StatCardGridSkeleton({
+  count = 4,
+  columns = count,
+}: {
+  count?: number
+  columns?: number
+}) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className={cn('grid gap-4', SPALTEN[columns] ?? SPALTEN[4])}>
       {Array.from({ length: count }).map((_, i) => (
         <StatCardSkeleton key={i} />
       ))}

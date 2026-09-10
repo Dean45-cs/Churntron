@@ -134,6 +134,43 @@ export function monatsSchluessel(d: Date) {
   return `${t.jahr}-${String(t.monat).padStart(2, '0')}`
 }
 
+/**
+ * Monatsschluessel aus Jahr und Monat. Ueberlaeufe sind erlaubt und gewollt:
+ * Monat 13 ist Januar des Folgejahres, Monat 0 der Dezember davor. Damit
+ * rechnen Kalendermonat und Abrechnungsperiode mit derselben Arithmetik.
+ */
+export function monatsSchluesselAus(jahr: number, monat: number) {
+  const j = jahr + Math.floor((monat - 1) / 12)
+  const m = ((((monat - 1) % 12) + 12) % 12) + 1
+  return `${j}-${String(m).padStart(2, '0')}`
+}
+
+export function monatsTeile(schluessel: string) {
+  const [jahr, monat] = schluessel.split('-').map(Number)
+  if (!jahr || !monat) throw new Error(`Ungueltiger Monatsschluessel: ${schluessel}`)
+  return { jahr, monat }
+}
+
+/** Der Kalendermonat: vom 1. bis zum 1. des Folgemonats (bis ausschliesslich). */
+export function monatsGrenzen(schluessel: string) {
+  const { jahr, monat } = monatsTeile(schluessel)
+  return { von: ausTeilen(jahr, monat, 1), bis: ausTeilen(jahr, monat + 1, 1) }
+}
+
+/**
+ * "01.09. – 30.09.2026" – beide Randtage, das Jahr nur einmal am Ende.
+ *
+ * `bis` ist die ausschliessende obere Grenze; beschriftet wird der Tag davor.
+ * Der geht ueber `plusTage` und nicht ueber "minus 86.400.000", damit an den
+ * beiden Umstellungstagen im Jahr nicht 23 oder 25 Stunden gerechnet werden.
+ */
+export function spanneLabel(von: Date, bis: Date) {
+  const v = teile(von)
+  const letzter = teile(plusTage(bis, -1))
+  const zwei = (n: number) => String(n).padStart(2, '0')
+  return `${zwei(v.tag)}.${zwei(v.monat)}. – ${zwei(letzter.tag)}.${zwei(letzter.monat)}.${letzter.jahr}`
+}
+
 const MONATE = [
   'Januar',
   'Februar',

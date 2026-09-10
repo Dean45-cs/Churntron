@@ -16,12 +16,17 @@ const PAGES = [
   ['dashboard', '/dashboard'],
   ['churn', '/dashboard/churn'],
   ['gespraech', '/dashboard/gespraech'],
+  ['wiki', '/dashboard/wiki'],
   ['commissions', '/dashboard/commissions'],
   ['commissions-verdienst', '/dashboard/commissions/verdienst'],
   ['commissions-rechner', '/dashboard/commissions/rechner'],
   ['commissions-abgleich', '/dashboard/commissions/abgleich'],
   ['commissions-katalog', '/dashboard/commissions/katalog'],
   ['challenges', '/dashboard/challenges'],
+  ['konto', '/dashboard/konto'],
+  ['konto-anzeige', '/dashboard/konto/anzeige'],
+  ['konto-sicherheit', '/dashboard/konto/sicherheit'],
+  ['verwaltung-nutzer', '/dashboard/verwaltung/nutzer'],
 ]
 
 const browser = await chromium.launch({

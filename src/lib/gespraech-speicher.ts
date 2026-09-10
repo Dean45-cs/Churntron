@@ -54,6 +54,5 @@ export function schreibe(art: Ablage, schluessel: string, wert: string) {
 
 export const SCHLUESSEL = {
   phase: 'churntron-gespraech-phase',
-  reiter: 'churntron-gespraech-reiter',
   offen: 'churntron-gespraech-offen',
 } as const

@@ -1,9 +1,11 @@
 # Churntron – Projektplan
 
-Internes Vertriebs-Tool der TNG. Drei Module: Churn-Leitfaden, Provisionen, Challenges.
+Internes Vertriebs-Tool der TNG. Vier Module: Churn-Leitfaden, Einwand-Wiki,
+Provisionen, Challenges.
 
-**Stand: Stage 1 (Grundgerüst) und Stage 4 (Provisions-Tracker) sind fertig,
-aus Stage 3 steht der Gesprächsleitfaden.** Stage 2 und 5 stehen aus.
+**Stand: Stage 1 (Grundgerüst), Stage 4 (Provisions-Tracker), Stage 6
+(Einwand-Wiki) und Stage 7 (Konten und Profile) sind fertig, aus Stage 3
+steht der Gesprächsleitfaden.** Stage 2 und 5 stehen aus.
 
 ---
 
@@ -48,6 +50,7 @@ Vollständig in `prisma/schema.prisma`. Kern:
 | Modell             | Zweck                                                                  |
 | ------------------ | ---------------------------------------------------------------------- |
 | `Team`, `User`     | Vertriebler und Ausbilder, Rollen `REP` / `ADMIN`                      |
+| `UserAvatar`       | Profilbild als BYTEA – eigene Tabelle, damit die Bytes nicht mitlesen  |
 | `Contract`         | Vertrag mit Status, Kündigungsgrund und Wiedervorlage-Termin           |
 | `ChurnActivity`    | Anrufe, Mails, Angebote je Vertrag                                     |
 | `CommissionRule`   | Provisionskatalog **als Daten**, nicht im Code                         |
@@ -57,6 +60,7 @@ Vollständig in `prisma/schema.prisma`. Kern:
 | `Challenge`        | Wettbewerb mit Metrik, Ziel und Zeitraum                               |
 | `PointsEvent`      | Punkte als **Einzelereignisse** – trägt den Leaderboard-Zeitraumfilter |
 | `ImportBatch`      | Import-Charge mit erkannter Spaltenzuordnung                           |
+| `Objection`        | Ein Eintrag der Einwand-Wiki – bewusst ohne Vertragsbezug              |
 
 Zwei bewusste Entscheidungen:
 
@@ -122,6 +126,11 @@ Die Leitregel dafür: **das Werkzeug hilft, es erzeugt keine Arbeit.** Kein Prot
 kein Pflichtfeld, kein Datenbankschreiben. Gemerkt wird nur die Stelle, an der man
 steht – und die merkt es sich von selbst.
 
+**Zur Einwand-Wiki (Stage 6) gibt es keine Doppelung.** Phase 7 zeigt die fünf
+Einwände, die im Leitfaden stehen, und verweist für alles Weitere in die Wiki. Zwei
+Suchen für dieselbe Frage wären im Gespräch genau die Stelle, an der man zu lange
+sucht.
+
 Offen bleibt der Rest des Moduls: Detailansicht je Vertrag, Aktivitäten erfassen,
 Wiedervorlage abhaken. Und im Leitfaden selbst die Closer W1–W18 mit der Zuordnung je
 Kündigertyp; mit ihnen kommt der Typ-Umschalter, denn vorher bewirkt er nichts. Wo das
@@ -157,6 +166,70 @@ und die automatische Clawback-Frist aus `CommissionRule.clawbackDays`.
 Anlege-Formular für Admins, funktionaler Zeitraumfilter im Leaderboard,
 automatische Punktevergabe beim Statuswechsel auf `WON_BACK`.
 
+### Stage 6 – Einwand-Wiki ✅ fertig
+
+Nicht ursprünglich geplant, aber aus dem Alltag heraus gefordert: Gute
+Einwandbehandlungen stehen bisher auf Zetteln, im Kopf oder nirgends – und im Gespräch
+fehlen sie genau dann, wenn sie gebraucht werden.
+
+- **Suche, die im Gespräch mithält.** Getippt wird, was der Kunde gerade gesagt hat.
+  „zu teuer" findet Preiserhöhung, Rabattforderung und „woanders günstiger" mit.
+  Vier Schichten: Umlaute ausschreiben, Stammformen, Wortfelder, Tippfehler-Abstand.
+  Reine Rechnung in `src/lib/objection-search.ts`, im Browser ausgeführt.
+- **Zweigeteilte Trefferliste.** Oben, was den Einwand selbst trifft; darunter, was nur
+  im Antworttext vorkommt.
+- **Drei Schritte statt Fließtext.** Ein Eintrag zeigt _Jetzt sagen · Das zählt · Und
+  dann fragen_ – im Gespräch wird nicht gelesen, sondern gesprochen. Die Form kommt vom
+  Autor (erste Zeile = Einstiegssatz, danach ein Gedanke pro Zeile); wer einen Absatz
+  tippt, bekommt einen Absatz.
+- **Pflege in der Oberfläche.** Anlegen, überarbeiten, archivieren – ohne Umweg über
+  einen Admin und ohne Code-Änderung. Der Startbestand (24 Einträge) steht in
+  `src/lib/objection-catalog.ts`. Der Seed ergänzt fehlende Einträge und frischt einen
+  Starteintrag auf, solange ihn niemand überarbeitet hat – danach gehört er dem Team.
+- **Datenschutz an der Eingabe.** Die erste Stelle im Projekt, an der Freitext von Hand
+  in die Datenbank kommt: Ziffernfolgen ab sechs Stellen und E-Mail-Adressen werden
+  abgewiesen.
+
+Offen: Die Wortfelder in `THEMEN` sind mit dem Vertriebsalltag abzugleichen – welche
+Begriffe fallen am Telefon wirklich? Das ist ein Termin mit dem Team, keine Programmierung.
+
+### Stage 7 – Konten, Profile und stille Aktualisierung ✅ fertig
+
+- **Konto-Bereich** unter `/dashboard/konto`: Profilbild, Anzeigename, Funktion und
+  ein kurzer Text; Anzeige-Einstellungen; Passwort ändern mit Prüfung des alten.
+- **Nutzerverwaltung** für Admins: Konten anlegen, Rolle und Team setzen,
+  deaktivieren, Passwort zurücksetzen. Keine Selbstregistrierung – wer Zugang
+  bekommt, entscheidet die Teamleitung.
+- **Sitzung aus der Datenbank.** Das JWT trägt nur noch die ID. Vorher standen Name,
+  Rolle und Team im Token: eine Namensänderung wäre bis zum nächsten Anmelden
+  unsichtbar geblieben, und ein deaktiviertes Konto hätte weiterarbeiten können.
+- **Profilbild in Postgres.** Der Browser schneidet auf 256×256 zu (rund 30 KB), der
+  Server prüft Format und Größe an den Magic Bytes und liefert es unter
+  `/api/avatar/[userId]?v=…` nur an Angemeldete aus. Kein S3, kein Vercel Blob –
+  ein weiterer Anbieter samt Auftragsverarbeitung wäre für 30 Bilder unverhältnismäßig.
+
+**Was „live synchronisieren" hier heißt.** Die Daten waren nie getrennt: alle
+arbeiten auf derselben Datenbank. Gefehlt hat nur das Nachladen. Das macht jetzt
+`router.refresh()` im eingestellten Takt (Standard 30 s, abschaltbar), pausiert bei
+verstecktem Fenster.
+
+Echtes Push über SSE oder WebSockets wurde **bewusst nicht** gebaut. Auf Vercel ist
+jede offene Verbindung eine laufende Funktion mit Laufzeitdeckel, und zwischen den
+Instanzen gibt es keinen gemeinsamen Speicher: eine Buchung in Instanz 1 erreicht
+einen Stream in Instanz 2 nie. Es bräuchte einen Vermittler – Postgres
+`LISTEN/NOTIFY` (verträgt sich schlecht mit Neons Pooling) oder einen Dienst wie
+Upstash, Pusher, Ably. Damit stünden Auftragsverarbeitung und Drittlandtransfer ein
+zweites Mal auf der Liste, für einen Zugewinn von einer halben Minute.
+
+Auf einem internen TNG-Server ist dasselbe dagegen fast geschenkt: ein EventEmitter
+im Prozess, ein Tag Arbeit, kein Fremdanbieter. Die Entscheidung hängt also an
+offenem Punkt 8 (Hosting) und nicht am Code.
+
+Wo Live wirklich etwas wert wäre, ist ohnehin nicht der Tracker – dort bucht jeder
+für sich –, sondern **Stage 3**: verhindern, dass zwei Leute denselben gekündigten
+Kunden anrufen. Das löst eine Spalte (`claimedById`, `claimedAt`) plus die
+Aktualisierung von hier, keine WebSockets.
+
 ---
 
 ## 5. Fahrplan der drei Termine
@@ -171,6 +244,7 @@ Stornofristen · Regelpflege in der Oberfläche
 
 **Termin 3 – Challenges & Feinschliff**
 Punktelogik festlegen · Stage 5 bauen · Design-Review über alle Module ·
+Wortfelder der Einwand-Wiki mit dem Team abgleichen ·
 offene Punkte für die Dynamics-Anbindung sammeln
 
 ---
@@ -184,14 +258,24 @@ offene Punkte für die Dynamics-Anbindung sammeln
 3. **Auszahlungsrhythmus bestätigen** – Angenommen ist: Periode vom 20. bis zum 19.,
    Auszahlung eine Abrechnung später. Der Katalog sagt nur „im Folgemonat abgerechnet".
    Nennt die Lohnbuchhaltung etwas anderes, sind es zwei Konstanten in
-   `src/lib/period.ts` (`STICHTAG`, `AUSZAHLUNG_VERZUG_MONATE`).
+   `src/lib/period.ts` (`STICHTAG`, `AUSZAHLUNG_VERZUG_MONATE`). Bis das bestätigt ist,
+   zeigt die Oberfläche ohnehin beide Zuschnitte nebeneinander – Kalendermonat und
+   Abrechnungszeitraum, siehe `src/lib/zeitraum.ts`. Ein anderer Stichtag ändert dann
+   nur die zweite Spalte, nicht die Ansicht.
 4. **Staffeln, Sonderboni, Stornofristen** – der Katalog kennt bisher nur Fixbeträge.
    `CommissionRule.percent` und `clawbackDays` stehen bereit, sind aber ungenutzt.
 5. **Steuerwerte 2027** – die Tabelle in `src/lib/brutto-netto.ts` gilt für 2025 und 2026.
 6. **Punktelogik** – welche Aktivität zählt wie viel. Termin 3.
-7. **Hosting** – Vorgaben der TNG-IT (Vercel erlaubt, oder interner Server?).
-8. **Dynamics 365** – Zeitpunkt und Schnittstellen-Details des Custom-Builds.
-9. **Doc 02 und Doc 05 zum Leitfaden** – der Closer-Katalog W1–W18 mit den Top 3 je
+7. **Wortfelder der Einwand-Wiki** – `THEMEN` in `src/lib/objection-search.ts` ist ein
+   Vorschlag aus dem Katalog heraus. Welche Begriffe am Telefon wirklich fallen, weiß
+   das Team. Eine Runde gemeinsam durchgehen, dann steht die Suche.
+8. **Doc 02 und Doc 05 zum Leitfaden** – der Closer-Katalog W1–W18 mit den Top 3 je
    Kündigertyp und die Eskalationsstufen als Euro-Pakete. Vier Closer (W11, W12, W16,
-   W17) sind bislang nirgends benannt. Ohne die beiden Dokumente bleiben Phase 4 und
-   die Einwandliste unvollständig – im Werkzeug als „folgt" markiert.
+   W17) sind bislang nirgends benannt. Ohne die beiden Dokumente bleibt Phase 4
+   unvollständig – im Werkzeug als „folgt" markiert.
+9. **Hosting** – Vorgaben der TNG-IT (Vercel erlaubt, oder interner Server?).
+   Hängt jetzt auch an der Frage, ob echtes Push je gebaut wird (Stage 7).
+10. **Dynamics 365** – Zeitpunkt und Schnittstellen-Details des Custom-Builds.
+11. **Anwesenheit im Leaderboard?** Ein „Toni ist online"-Punkt wäre technisch klein,
+    aber Verhaltenskontrolle. Vor dem Bauen der Betriebsrat, nicht danach –
+    siehe DEPLOY.md. Bislang steht bewusst nur `lastLoginAt` in der Datenbank.
