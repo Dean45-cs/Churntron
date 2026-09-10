@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
+import { GespraechsPanel } from '@/components/gespraech/gespraechs-panel'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -25,6 +26,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <div className="mx-auto w-full max-w-6xl">{children}</div>
         </main>
       </div>
+
+      {/* Haengt im Layout und nicht in einer Seite: so bleibt der Leitfaden
+          beim Wechsel zwischen den Modulen offen und an derselben Phase. */}
+      <GespraechsPanel />
     </div>
   )
 }

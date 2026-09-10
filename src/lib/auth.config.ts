@@ -24,8 +24,12 @@ export const authConfig = {
   callbacks: {
     authorized({ auth, request }) {
       const loggedIn = Boolean(auth?.user)
-      const onDashboard = request.nextUrl.pathname.startsWith('/dashboard')
-      if (onDashboard) return loggedIn
+      const { pathname } = request.nextUrl
+      // /gespraech ist das eigene Fenster des Leitfadens. Es liegt ausserhalb
+      // von /dashboard, weil es ohne Sidebar und Topbar laufen muss – der
+      // Schutz muss deshalb ausdruecklich mitgezogen werden.
+      const geschuetzt = pathname.startsWith('/dashboard') || pathname.startsWith('/gespraech')
+      if (geschuetzt) return loggedIn
       return true
     },
     jwt({ token, user }) {

@@ -3,11 +3,11 @@
 Internes Vertriebs-Tool der TNG mit drei Modulen: **Churn-Leitfaden**,
 **Provisionen** und **Challenges**.
 
-Aktueller Stand: **Grundgerüst (Stage 1)** steht, und das **Provisionsmodul (Stage 4)**
-ist ausgebaut: selbst tracken per Tastendruck, Verdienst-Auswertung von der Stunde bis
-zum Jahr, Brutto-Netto-Rechner und der Abgleich mit der tatsächlichen Auszahlung.
-Import (Stage 2), Churn-Modul (Stage 3) und Challenges (Stage 5) folgen –
-siehe [PLAN.md](./PLAN.md).
+Aktueller Stand: **Grundgerüst (Stage 1)** steht, das **Provisionsmodul (Stage 4)**
+ist ausgebaut – selbst tracken per Tastendruck, Verdienst-Auswertung von der Stunde bis
+zum Jahr, Brutto-Netto-Rechner und der Abgleich mit der tatsächlichen Auszahlung –, und
+aus dem Churn-Modul (Stage 3) läuft der **Gesprächsleitfaden**. Import (Stage 2), der
+Rest des Churn-Moduls und die Challenges (Stage 5) folgen – siehe [PLAN.md](./PLAN.md).
 
 Online stellen: [DEPLOY.md](./DEPLOY.md).
 
@@ -65,6 +65,41 @@ npm run dev             # http://localhost:3000
 Passwort für beide: der Wert von `DEMO_PASSWORD` aus der `.env` (Standard: `churntron`).
 Als Admin sind zusätzlich die Team-Übersicht bei den Provisionen und der
 Verwaltungsbereich in der Navigation sichtbar.
+
+---
+
+## Das Gesprächsmodul
+
+Der Winback-Leitfaden (Outbound nach Kündigungseingang) im Tool, für das laufende
+Telefonat. Elf Phasen im Wortlaut des Leitfadens, die Einwandbehandlung als eigener
+Reiter, die vier Leitplanken dauerhaft in der Fußzeile.
+
+**Drei Wege, ihn offen zu haben:**
+
+| Weg                              | Wofür                                                                                                                                     |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **„Gespräch"** in der Navigation | Der Leitfaden in voller Breite – zum Durchgehen mit dem Ausbilder.                                                                        |
+| **Griff am rechten Rand**        | Klappt den Leitfaden als Schublade auf. Sie bleibt offen, während du in den anderen Modulen arbeitest, und steht noch an derselben Phase. |
+| **„Eigenes Fenster"**            | Ein schmales Fenster ohne Navigation, zum Danebenlegen neben das Kampagnen-Lookup. Das ist der Weg für den Anruf selbst.                  |
+
+**Tastatur**, weil beim Telefonieren eine Hand am Hörer ist:
+`←` / `→` blättern durch die Phasen, `e` holt die Einwände und bringt dich zurück,
+`Esc` schließt die Schublade.
+
+**Was das Modul bewusst nicht tut:** protokollieren. Es gibt kein Formular, keine
+Pflichtfelder, nichts abzuhaken – der Leitfaden schreibt nichts in die Datenbank.
+Er merkt sich nur, an welcher Phase du stehst, und das von selbst.
+
+### Den Leitfaden ändern
+
+Er steht in `src/lib/leitfaden.ts` – Phasen, Einwände und Leitplanken als Daten, eine
+Datei, keine Fachlogik. Die Phasennummern sind der Vertrag mit dem Papierdokument: sie
+laufen lückenlos von 0 bis 10, und `npm test` fällt, wenn jemand eine Phase einschiebt,
+ohne umzunummerieren.
+
+Wo das Dokument auf weitere Unterlagen verweist – die Closer W1–W18 je Kündigertyp, die
+Eskalationsstufen als Euro-Pakete –, steht im Leitfaden ein Kasten mit „folgt". Diese
+Lücken sind gewollt sichtbar: Sie zeigen, was zum vollständigen Leitfaden noch fehlt.
 
 ---
 

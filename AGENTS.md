@@ -1,8 +1,9 @@
 # Churntron – Projektkonventionen
 
 Internes Vertriebs-Tool der TNG. Drei Module: Churn-Leitfaden, Provisionen, Challenges.
-Das Grundgerüst (Stage 1) steht, das Provisionsmodul (Stage 4) ist ausgebaut.
-Import, Churn-Fachlogik und Challenges folgen (siehe `PLAN.md`).
+Das Grundgerüst (Stage 1) steht, das Provisionsmodul (Stage 4) ist ausgebaut, und der
+Gesprächsleitfaden aus Stage 3 läuft. Import, die übrige Churn-Fachlogik und die
+Challenges folgen (siehe `PLAN.md`).
 
 ## Die eine Regel, die nicht verhandelbar ist
 
@@ -22,12 +23,15 @@ src/
   app/
     (dashboard)/        Route-Gruppe mit Auth-Guard, Sidebar und Topbar
       dashboard/        Übersicht + die drei Module, je mit loading.tsx
+      gespraech/        der Gesprächsleitfaden, breit
+    gespraech/          derselbe Leitfaden als eigenes Fenster, ohne Sidebar/Topbar
     login/              Anmeldung (Server Action)
     api/auth/           NextAuth-Handler
   components/
     ui/                 Primitive: Card, Button, Badge, Skeleton, Progress
     skeletons/          Ladezustände – je ein Baustein pro wiederkehrendem Block
     layout/             Sidebar, Topbar, Theme-Umschalter
+    gespraech/          Leitfaden und die Schublade, die ihn im Dashboard trägt
   lib/
     db.ts               Prisma-Client (Driver-Adapter, Prisma 7)
     auth.ts             NextAuth mit Credentials-Provider
@@ -40,6 +44,8 @@ src/
     time.ts             Tages-, Wochen- und Monatsgrenzen in Europe/Berlin
     earnings.ts         Verdienst-Auswertung (reine Rechnung, ohne Datenbank)
     brutto-netto.ts     Lohnsteuer, Soli, Sozialabgaben – reine Rechnung
+    leitfaden.ts        der Gesprächsleitfaden als Daten – Phasen, Einwände, Leitplanken
+    gespraech-speicher.ts  wo der Leitfaden steht und ob die Schublade offen ist
     labels.ts           deutsche Beschriftungen der Enum-Werte
     utils.ts            cn, formatEuro, formatDate, initials, Eingabe-Parser
     dev.ts              devDelay für die Skeleton-Demo
@@ -110,6 +116,30 @@ Gesetzgeber sie, und dann soll genau ein Block angefasst werden müssen. Die Tes
 prüfen ihn über seine Eigenschaften – Stetigkeit an den Zonengrenzen, Monotonie,
 Deckelung an den Beitragsbemessungsgrenzen –, nicht auf den Cent gegen eine
 Lohnabrechnung.
+
+## Gesprächsleitfaden
+
+Der Leitfaden ist das Werkzeug für das laufende Telefonat. Drei Regeln:
+
+1. **Er bildet das Dokument 1:1 ab.** Gleiche Phasennummern, gleicher Wortlaut bei den
+   O-Ton-Sätzen. Wenn der Ausbilder „Phase 4" sagt, muss im Fenster Phase 4 stehen –
+   deshalb wird in `src/lib/leitfaden.ts` nicht umsortiert, gekürzt oder umformuliert.
+   `src/lib/__tests__/leitfaden.test.ts` hält die Nummerierung fest.
+2. **Was das Dokument nur als Verweis nennt, steht als sichtbare Lücke drin** – ein
+   Block der Art `luecke` mit dem Kennzeichen „folgt", nicht als stille Auslassung. Wer
+   das Fenster aufhat, soll auch sehen, was noch fehlt.
+3. **Das Werkzeug hilft, es erzeugt keine Arbeit.** Kein Protokoll, kein Pflichtfeld,
+   kein Datenbankschreiben – der Leitfaden liest nur aus einer Datei. Gemerkt wird die
+   Stelle, an der man steht, und die merkt er sich von selbst.
+
+Ein Bauteil, drei Hüllen: Seite, Schublade im Dashboard-Layout, eigenes Fenster unter
+`/gespraech`. Schmal und breit unterscheiden sich über **Container-Queries**
+(`@container`), nicht über Media-Queries – die Schublade ist schmal, obwohl der
+Bildschirm breit ist, da greifen Viewport-Breakpoints nicht.
+
+Browser-Zustand läuft über `src/lib/gespraech-speicher.ts` und `useSyncExternalStore`,
+nicht über `useState` plus `useEffect`: der Lint-Regelsatz `react-hooks/set-state-in-effect`
+verbietet den Umweg, und nebenbei bleiben zwei Ansichten im selben Dokument von selbst gleich.
 
 ## Design
 

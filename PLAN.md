@@ -2,8 +2,8 @@
 
 Internes Vertriebs-Tool der TNG. Drei Module: Churn-Leitfaden, Provisionen, Challenges.
 
-**Stand: Stage 1 (Grundgerüst) und Stage 4 (Provisions-Tracker) sind fertig.**
-Stage 2, 3 und 5 stehen aus.
+**Stand: Stage 1 (Grundgerüst) und Stage 4 (Provisions-Tracker) sind fertig,
+aus Stage 3 steht der Gesprächsleitfaden.** Stage 2 und 5 stehen aus.
 
 ---
 
@@ -110,11 +110,29 @@ HomeID_aufgenommen; Beratungsprotokoll_ausgehaendigt; Bewertung_Beratung; Bearbe
 `Name`, `Telefon` und `Waehlnummer` werden beim Import **verworfen**,
 `Vertrag`/`Kundennummer` werden zu `externalRef`.
 
-### Stage 3 – Churn-Modul
+### Stage 3 – Churn-Modul (Gesprächsleitfaden ✅)
 
-Detailansicht je Vertrag, Gesprächsleitfaden passend zum Kündigungsgrund, Aktivitäten
-erfassen, Wiedervorlage abhaken. Die Leitfaden-Texte kommen als MDX-Dateien pro Grund,
-damit der Ausbilder sie ohne Code-Änderung anpassen kann.
+**Der Gesprächsleitfaden steht.** Winback Universal, Outbound nach Kündigungseingang:
+alle elf Phasen im Wortlaut des Dokuments, die Einwandbehandlung und die Leitplanken.
+Er läuft in drei Hüllen aus einem Bauteil – als Seite unter „Gespräch", als Schublade,
+die beim Arbeiten in den anderen Modulen offen bleibt, und als eigenes Fenster zum
+Danebenlegen neben das Kampagnen-Lookup.
+
+Die Leitregel dafür: **das Werkzeug hilft, es erzeugt keine Arbeit.** Kein Protokoll,
+kein Pflichtfeld, kein Datenbankschreiben. Gemerkt wird nur die Stelle, an der man
+steht – und die merkt es sich von selbst.
+
+Offen bleibt der Rest des Moduls: Detailansicht je Vertrag, Aktivitäten erfassen,
+Wiedervorlage abhaken. Und im Leitfaden selbst die Closer W1–W18 mit der Zuordnung je
+Kündigertyp; mit ihnen kommt der Typ-Umschalter, denn vorher bewirkt er nichts. Wo das
+Dokument auf Doc 02 und Doc 05 verweist, steht im Werkzeug eine sichtbare Lücke.
+
+**Die MDX-Entscheidung ist revidiert.** Der Leitfaden steht als typisierte Daten in
+`src/lib/leitfaden.ts`. Er ist keine Prosa, sondern Struktur – Phasen, Zuordnungen,
+Eskalationsstufen, Einwände –, und genau diese Struktur trägt später den Typ-Filter und
+die Closer-Eskalation. MDX bräuchte erst eine Pipeline und könnte die Struktur nicht
+liefern. Der Weg ist derselbe wie beim Provisionskatalog: erst Datei, später Datenbank
+mit Pflege in der Oberfläche.
 
 ### Stage 4 – Provisions-Tracker ✅ fertig
 
@@ -173,3 +191,7 @@ offene Punkte für die Dynamics-Anbindung sammeln
 6. **Punktelogik** – welche Aktivität zählt wie viel. Termin 3.
 7. **Hosting** – Vorgaben der TNG-IT (Vercel erlaubt, oder interner Server?).
 8. **Dynamics 365** – Zeitpunkt und Schnittstellen-Details des Custom-Builds.
+9. **Doc 02 und Doc 05 zum Leitfaden** – der Closer-Katalog W1–W18 mit den Top 3 je
+   Kündigertyp und die Eskalationsstufen als Euro-Pakete. Vier Closer (W11, W12, W16,
+   W17) sind bislang nirgends benannt. Ohne die beiden Dokumente bleiben Phase 4 und
+   die Einwandliste unvollständig – im Werkzeug als „folgt" markiert.

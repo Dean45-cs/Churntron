@@ -18,7 +18,7 @@ export default function ChurnPage() {
     <>
       <PageHeader
         title="Churn-Leitfaden"
-        description="Gekündigte und widerrufene Verträge mit Wiedervorlage. Die Gesprächsleitfäden je Grund folgen in Stage 3."
+        description="Gekündigte und widerrufene Verträge mit Wiedervorlage. Der Gesprächsleitfaden steht unter „Gespräch“ – die Fassungen je Kündigungsgrund folgen."
       />
 
       <Suspense fallback={<StatCardGridSkeleton />}>
