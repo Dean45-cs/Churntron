@@ -21,6 +21,7 @@ const PAGES = [
   ['commissions-abgleich', '/dashboard/commissions/abgleich'],
   ['commissions-katalog', '/dashboard/commissions/katalog'],
   ['challenges', '/dashboard/challenges'],
+  ['duels', '/dashboard/duels'],
 ]
 
 const browser = await chromium.launch({

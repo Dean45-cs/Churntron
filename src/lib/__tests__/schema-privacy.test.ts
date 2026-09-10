@@ -77,6 +77,8 @@ describe('Datenmodell traegt die geplanten Bausteine', () => {
     'Challenge',
     'PointsEvent',
     'ImportBatch',
+    'Duel',
+    'DuelParticipant',
   ])('kennt das Modell %s', (name) => {
     expect(() => modelBody(name)).not.toThrow()
   })
@@ -84,5 +86,17 @@ describe('Datenmodell traegt die geplanten Bausteine', () => {
   it('speichert Punkte als Einzelereignisse, damit Zeitraumfilter moeglich sind', () => {
     const body = modelBody('PointsEvent')
     expect(fieldNames(body)).toContain('occurredAt')
+  })
+
+  /**
+   * Der Duell-Punktestand wird aus den Buchungen gerechnet und nicht gespeichert.
+   * Eine Spalte dafuer waere eine zweite Wahrheit neben der Provisionsbuchung –
+   * und die erste, die bei einem Storno falsch stuende.
+   */
+  it('haelt im Duell keinen eigenen Punktestand', () => {
+    const felder = fieldNames(modelBody('DuelParticipant')).map((f) => f.toLowerCase())
+    expect(felder).not.toContain('score')
+    expect(felder).not.toContain('points')
+    expect(felder).toContain('side')
   })
 })

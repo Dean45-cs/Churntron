@@ -106,6 +106,8 @@ model User {
   settings     UserSettings?
   pointsEvents PointsEvent[]
   imports      ImportBatch[]
+  duels        DuelParticipant[]
+  duelsCreated Duel[]            @relation("DuelCreator")
 
   createdAt DateTime @default(now())
 }
@@ -304,4 +306,78 @@ model ImportBatch {
 
   contracts Contract[]
   createdAt DateTime   @default(now())
+}
+
+/// Wie viele auf jeder Seite stehen. Mehr als 2 gegen 2 ist bewusst nicht
+/// vorgesehen – ab da ist es kein Duell mehr, sondern eine Challenge.
+enum DuelMode {
+  ONE_VS_ONE
+  TWO_VS_TWO
+}
+
+/// Worum gespielt wird. Jede Metrik wird aus Daten gerechnet, die ohnehin
+/// entstehen – ein Duell verlangt niemandem eine Zusatzerfassung ab.
+/// Die Zuordnung Metrik -> Quelle steht in src/lib/duels.ts.
+enum DuelMetric {
+  COMMISSION_CENTS
+  BOOKINGS
+  SALES
+  CHURN_SAVED
+  CALLS
+  POINTS
+}
+
+enum DuelStatus {
+  /// Herausgefordert, aber noch nicht von allen angenommen.
+  OPEN
+  RUNNING
+  FINISHED
+  DECLINED
+  CANCELLED
+}
+
+/// Ein Duell zwischen Kolleginnen und Kollegen: 1 gegen 1 oder 2 gegen 2.
+///
+/// Der Punktestand wird NICHT gespeichert, sondern bei jedem Aufruf aus den
+/// Buchungen bzw. Aktivitaeten im Zeitfenster gerechnet. Das ist Absicht:
+/// wird eine Buchung nachtraeglich storniert, faellt sie auch aus dem Duell
+/// heraus. Gewonnen hat, wer wirklich geliefert hat.
+model Duel {
+  id       String     @id @default(cuid())
+  mode     DuelMode
+  metric   DuelMetric
+  status   DuelStatus @default(OPEN)
+  /// Optionaler Zielwert ("wer zuerst 10 Abschlüsse"). Ohne ihn gewinnt,
+  /// wer am Ende des Zeitraums vorn liegt.
+  target   Int?
+  /// Worum es geht – Kaffee, Kuchen, Ehre. Freitext, bewusst ohne Katalog.
+  stake    String?
+  startsAt DateTime
+  endsAt   DateTime
+
+  createdById String
+  createdBy   User   @relation("DuelCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  participants DuelParticipant[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, endsAt])
+}
+
+model DuelParticipant {
+  id     String @id @default(cuid())
+  duelId String
+  duel   Duel   @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// 1 oder 2 – die beiden Seiten des Duells.
+  side     Int
+  /// Die Einladung angenommen? Wer herausfordert, steht sofort auf true.
+  accepted Boolean @default(false)
+
+  @@unique([duelId, userId])
+  @@index([userId])
 }

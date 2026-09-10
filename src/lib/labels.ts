@@ -6,7 +6,10 @@ import type {
   ContractStatus,
   ActivityType,
   ActivityOutcome,
+  DuelMetric,
+  DuelMode,
 } from '@prisma/client'
+import type { DuellPhase } from '@/lib/duels'
 
 /**
  * Deutsche Beschriftungen der Enum-Werte an einer Stelle.
@@ -77,4 +80,28 @@ export const ACTIVITY_OUTCOME_LABEL: Record<ActivityOutcome, string> = {
   CALLBACK: 'Rückruf',
   WON: 'Gewonnen',
   LOST: 'Verloren',
+}
+
+export const DUEL_MODE_LABEL: Record<DuelMode, string> = {
+  ONE_VS_ONE: '1 gegen 1',
+  TWO_VS_TWO: '2 gegen 2',
+}
+
+/** Worum im Duell gespielt wird. Die Frage dazu steht in src/lib/duels.ts. */
+export const DUEL_METRIC_LABEL: Record<DuelMetric, string> = {
+  COMMISSION_CENTS: 'Provision',
+  BOOKINGS: 'Gebuchte Vorgänge',
+  SALES: 'Abschlüsse',
+  CHURN_SAVED: 'Rückgewinnungen',
+  CALLS: 'Gespräche',
+  POINTS: 'Punkte',
+}
+
+export const DUEL_PHASE_LABEL: Record<DuellPhase, string> = {
+  EINLADUNG: 'Einladung offen',
+  LAEUFT: 'läuft',
+  BEENDET: 'beendet',
+  ABGELEHNT: 'abgelehnt',
+  ABGESAGT: 'abgesagt',
+  VERFALLEN: 'verfallen',
 }

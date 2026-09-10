@@ -12,6 +12,9 @@ import {
   CommissionCategory,
   CommissionStatus,
   ChallengeMetric,
+  DuelMetric,
+  DuelMode,
+  DuelStatus,
   SourceKind,
 } from '@prisma/client'
 import {
@@ -20,6 +23,8 @@ import {
   COMMISSION_CATALOG,
 } from '../src/lib/commission-catalog'
 import { periodeDavor, periodeVon, periodenZeitraum } from '../src/lib/period'
+import { vorlagenZeitraum } from '../src/lib/duels'
+import { plusTage, tagesBeginn, tagesEnde, wochenBeginn } from '../src/lib/time'
 
 const db = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -110,6 +115,8 @@ async function main() {
   }
 
   console.log('Raeume alte Seed-Daten weg ...')
+  await db.duelParticipant.deleteMany()
+  await db.duel.deleteMany()
   await db.pointsEvent.deleteMany()
   await db.commission.deleteMany()
   await db.commissionPayout.deleteMany()
@@ -484,6 +491,117 @@ async function main() {
     }
   }
 
+  // --- Duelle ------------------------------------------------------------
+  // Ein Querschnitt durch die Zustaende, den es fuer die Demo braucht: eine
+  // offene Einladung an den Demo-Login, zwei laufende Duelle (1 gegen 1 und
+  // 2 gegen 2) und zwei, die schon durch sind. Der Punktestand steht nirgends
+  // in der Datenbank – er faellt aus den Buchungen oben von selbst an.
+  const jo = users.find((u) => u.email === 'jo@tng.de')!
+  const mika = users.find((u) => u.email === 'mika@tng.de')!
+  const toni = users.find((u) => u.email === 'toni@tng.de')!
+  const ren = users.find((u) => u.email === 'ren@tng.de')!
+
+  const heute = vorlagenZeitraum('HEUTE', jetzt)
+  const dieseWoche = vorlagenZeitraum('WOCHE', jetzt)
+  const letzteWoche = {
+    von: plusTage(wochenBeginn(jetzt), -7),
+    bis: wochenBeginn(jetzt),
+  }
+  const gestern = {
+    von: tagesBeginn(plusTage(jetzt, -1)),
+    bis: tagesEnde(plusTage(jetzt, -1)),
+  }
+
+  const duellPlan: {
+    mode: DuelMode
+    metric: DuelMetric
+    status: DuelStatus
+    target?: number
+    stake?: string
+    von: Date
+    bis: Date
+    createdBy: string
+    seite1: string[]
+    seite2: string[]
+    /** Wer noch nicht zugesagt hat. */
+    offen?: string[]
+  }[] = [
+    {
+      mode: DuelMode.ONE_VS_ONE,
+      metric: DuelMetric.COMMISSION_CENTS,
+      status: DuelStatus.RUNNING,
+      stake: 'Kaffee für eine Woche',
+      ...heute,
+      createdBy: kevin.id,
+      seite1: [kevin.id],
+      seite2: [jo.id],
+    },
+    {
+      mode: DuelMode.TWO_VS_TWO,
+      metric: DuelMetric.BOOKINGS,
+      status: DuelStatus.RUNNING,
+      target: 60,
+      stake: 'Der Verlierer holt Brötchen',
+      ...dieseWoche,
+      createdBy: mika.id,
+      seite1: [mika.id, ren.id],
+      seite2: [kevin.id, toni.id],
+    },
+    {
+      mode: DuelMode.ONE_VS_ONE,
+      metric: DuelMetric.SALES,
+      status: DuelStatus.OPEN,
+      target: 5,
+      stake: 'Ehre',
+      ...dieseWoche,
+      createdBy: toni.id,
+      seite1: [toni.id],
+      seite2: [kevin.id],
+      offen: [kevin.id],
+    },
+    {
+      mode: DuelMode.ONE_VS_ONE,
+      metric: DuelMetric.COMMISSION_CENTS,
+      status: DuelStatus.FINISHED,
+      ...gestern,
+      createdBy: jo.id,
+      seite1: [jo.id],
+      seite2: [kevin.id],
+    },
+    {
+      mode: DuelMode.TWO_VS_TWO,
+      metric: DuelMetric.CALLS,
+      status: DuelStatus.FINISHED,
+      stake: 'Kuchen',
+      ...letzteWoche,
+      createdBy: kevin.id,
+      seite1: [kevin.id, jo.id],
+      seite2: [mika.id, toni.id],
+    },
+  ]
+
+  for (const d of duellPlan) {
+    const offen = new Set(d.offen ?? [])
+    await db.duel.create({
+      data: {
+        mode: d.mode,
+        metric: d.metric,
+        status: d.status,
+        target: d.target ?? null,
+        stake: d.stake ?? null,
+        startsAt: d.von,
+        endsAt: d.bis,
+        createdById: d.createdBy,
+        participants: {
+          create: [
+            ...d.seite1.map((userId) => ({ userId, side: 1, accepted: !offen.has(userId) })),
+            ...d.seite2.map((userId) => ({ userId, side: 2, accepted: !offen.has(userId) })),
+          ],
+        },
+      },
+    })
+  }
+
   const counts = {
     teams: await db.team.count(),
     users: await db.user.count(),
@@ -494,6 +612,7 @@ async function main() {
     payouts: await db.commissionPayout.count(),
     challenges: await db.challenge.count(),
     pointsEvents: await db.pointsEvent.count(),
+    duels: await db.duel.count(),
   }
   console.log(`Provisionsbuchungen im Tracker-Stil: ${gebucht}`)
   console.log('Seed fertig:', counts)

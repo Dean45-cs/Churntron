@@ -1,9 +1,10 @@
 # Churntron – Projektplan
 
-Internes Vertriebs-Tool der TNG. Drei Module: Churn-Leitfaden, Provisionen, Challenges.
+Internes Vertriebs-Tool der TNG. Vier Module: Churn-Leitfaden, Provisionen, Challenges,
+Duelle.
 
-**Stand: Stage 1 (Grundgerüst) und Stage 4 (Provisions-Tracker) sind fertig.**
-Stage 2, 3 und 5 stehen aus.
+**Stand: Stage 1 (Grundgerüst), Stage 4 (Provisions-Tracker) und Stage 6 (Duelle)
+sind fertig.** Stage 2, 3 und 5 stehen aus.
 
 ---
 
@@ -16,7 +17,7 @@ exportiert am Schichtende eine Reporting-CSV. Churntron liest diese CSV – und 
 ```
 Excel-Liste (PP)  →  Lookup-Tool (lokal, Klardaten)  →  Reporting-CSV  →  Churntron (DB)
                                                                               ↓
-                                                        Churn · Provisionen · Challenges
+                                              Churn · Provisionen · Challenges · Duelle
 ```
 
 Später ersetzt ein `DynamicsSource` den CSV-Weg, ohne dass UI oder Datenmodell sich ändern.
@@ -57,8 +58,10 @@ Vollständig in `prisma/schema.prisma`. Kern:
 | `Challenge`        | Wettbewerb mit Metrik, Ziel und Zeitraum                               |
 | `PointsEvent`      | Punkte als **Einzelereignisse** – trägt den Leaderboard-Zeitraumfilter |
 | `ImportBatch`      | Import-Charge mit erkannter Spaltenzuordnung                           |
+| `Duel`             | Duell mit Modus, Disziplin, Zeitfenster und Einsatz                    |
+| `DuelParticipant`  | Wer auf welcher Seite antritt – und ob zugesagt wurde                  |
 
-Zwei bewusste Entscheidungen:
+Drei bewusste Entscheidungen:
 
 - Punkte laufen über Einzelereignisse statt über einen Zähler pro Nutzer. Nur so
   funktioniert der Zeitraumfilter Tag/Woche/Monat aus Stage 5.
@@ -68,6 +71,11 @@ Zwei bewusste Entscheidungen:
 - `Commission.contractId` ist optional. Im Tracker ist eine Buchung ein Tastendruck;
   auf einen Vertragsdatensatz zu warten, den es in der Datenbank noch gar nicht gibt,
   würde genau das kaputt machen. Die Vertragsnummer wird als Freitext nachgetragen.
+- **Ein Duell hat keine Punktespalte.** Der Stand wird bei jedem Aufruf aus den
+  Buchungen im Zeitfenster gerechnet. Ein gespeicherter Zähler wäre eine zweite
+  Wahrheit neben der Provisionsbuchung – und die erste, die bei einem Storno falsch
+  stünde. Die Kosten dafür bleiben klein: pro Seite drei Abfragen für alle Duelle
+  zusammen, nicht drei je Duell.
 
 **Grundregel: keine Klardaten in der Datenbank.** Siehe README und `AGENTS.md`.
 
@@ -139,6 +147,27 @@ und die automatische Clawback-Frist aus `CommissionRule.clawbackDays`.
 Anlege-Formular für Admins, funktionaler Zeitraumfilter im Leaderboard,
 automatische Punktevergabe beim Statuswechsel auf `WON_BACK`.
 
+### Stage 6 – Duelle ✅ fertig
+
+Vorgezogen, weil der Bedarf konkret war: nicht ein Wettbewerb, den der Ausbilder
+ausschreibt (das ist Stage 5), sondern einer, den zwei Leute unter sich ausmachen.
+
+- **1 gegen 1 und 2 gegen 2.** Wer herausfordert, ist automatisch dabei; die anderen
+  bekommen eine Einladung und müssen zusagen. Ein Duell, das niemand annimmt, verfällt
+  mit seinem Zeitfenster.
+- **Sechs Disziplinen**, alle aus vorhandenen Daten: Provision, gebuchte Vorgänge,
+  Abschlüsse, Rückgewinnungen, Gespräche, Punkte. Ein Duell verlangt keine
+  Zusatzerfassung – wer eins laufen hat, arbeitet einfach weiter.
+- **Zeitraum** als Vorlage (heute, diese Woche, laufende Periode) oder frei gewählt.
+  Immer über `src/lib/time.ts`, nie über die Serverzeit.
+- **Tauziehen statt Tabelle.** Ein Balken zeigt, welcher Anteil am bisher Erreichten
+  auf welche Seite entfällt; darunter steht in einem Satz, wer führt und um wie viel.
+- **Optionaler Zielwert und Einsatz** – Kaffee, Kuchen, Ehre.
+- **Duell-Rangliste** über die letzten 30 Tage, aus den beendeten Duellen gerechnet.
+
+Offen geblieben: Benachrichtigung, wenn eine Einladung eintrifft (bislang sieht man sie
+beim nächsten Aufruf der Seite), und ein Revanche-Knopf am beendeten Duell.
+
 ---
 
 ## 5. Fahrplan der drei Termine
@@ -152,7 +181,8 @@ Stage 4 steht. Zu klären: Auszahlungsrhythmus bestätigen · Staffeln, Boni und
 Stornofristen · Regelpflege in der Oberfläche
 
 **Termin 3 – Challenges & Feinschliff**
-Punktelogik festlegen · Stage 5 bauen · Design-Review über alle Module ·
+Punktelogik festlegen · Stage 5 bauen · Duelle im Team ausprobieren und die
+Disziplinen nachschärfen · Design-Review über alle Module ·
 offene Punkte für die Dynamics-Anbindung sammeln
 
 ---
@@ -170,6 +200,11 @@ offene Punkte für die Dynamics-Anbindung sammeln
 4. **Staffeln, Sonderboni, Stornofristen** – der Katalog kennt bisher nur Fixbeträge.
    `CommissionRule.percent` und `clawbackDays` stehen bereit, sind aber ungenutzt.
 5. **Steuerwerte 2027** – die Tabelle in `src/lib/brutto-netto.ts` gilt für 2025 und 2026.
-6. **Punktelogik** – welche Aktivität zählt wie viel. Termin 3.
+6. **Punktelogik** – welche Aktivität zählt wie viel. Termin 3. Betrifft auch die
+   Duell-Disziplin „Punkte", die bislang auf denselben `PointsEvent`s sitzt.
 7. **Hosting** – Vorgaben der TNG-IT (Vercel erlaubt, oder interner Server?).
 8. **Dynamics 365** – Zeitpunkt und Schnittstellen-Details des Custom-Builds.
+9. **Duelle und Mitbestimmung** – ein Duell macht Leistungsvergleiche zwischen
+   Beschäftigten sichtbar. Das ist gewollt und freiwillig (niemand wird ohne Zusage
+   gewertet), gehört aber vor dem produktiven Einsatz genauso vor den Betriebsrat wie
+   das Leaderboard. Siehe README, Abschnitt Datenschutz.

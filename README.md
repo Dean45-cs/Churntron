@@ -1,12 +1,13 @@
 # Churntron
 
-Internes Vertriebs-Tool der TNG mit drei Modulen: **Churn-Leitfaden**,
-**Provisionen** und **Challenges**.
+Internes Vertriebs-Tool der TNG mit vier Modulen: **Churn-Leitfaden**,
+**Provisionen**, **Challenges** und **Duelle**.
 
-Aktueller Stand: **Grundgerüst (Stage 1)** steht, und das **Provisionsmodul (Stage 4)**
-ist ausgebaut: selbst tracken per Tastendruck, Verdienst-Auswertung von der Stunde bis
-zum Jahr, Brutto-Netto-Rechner und der Abgleich mit der tatsächlichen Auszahlung.
-Import (Stage 2), Churn-Modul (Stage 3) und Challenges (Stage 5) folgen –
+Aktueller Stand: **Grundgerüst (Stage 1)** steht, das **Provisionsmodul (Stage 4)**
+ist ausgebaut – selbst tracken per Tastendruck, Verdienst-Auswertung von der Stunde bis
+zum Jahr, Brutto-Netto-Rechner und der Abgleich mit der tatsächlichen Auszahlung – und
+die **Duelle (Stage 6)** laufen: 1 gegen 1 oder 2 gegen 2 gegen die Kolleginnen und
+Kollegen. Import (Stage 2), Churn-Modul (Stage 3) und Challenges (Stage 5) folgen –
 siehe [PLAN.md](./PLAN.md).
 
 Online stellen: [DEPLOY.md](./DEPLOY.md).
@@ -118,6 +119,35 @@ Variable gesetzt ist, steht ein Hinweis „Demo · erfundene Daten" in der Topba
 
 ---
 
+## Die Duelle
+
+**Duelle** sind der kleine Wettbewerb nebenbei: nicht etwas, das der Ausbilder
+ausschreibt, sondern etwas, das zwei Leute unter sich ausmachen. Wer herausfordert, ist
+automatisch dabei; die anderen bekommen eine Einladung und müssen zusagen.
+
+|               |                                                                                        |
+| ------------- | -------------------------------------------------------------------------------------- |
+| **Modus**     | 1 gegen 1 oder 2 gegen 2                                                               |
+| **Disziplin** | Provision · Gebuchte Vorgänge · Abschlüsse · Rückgewinnungen · Gespräche · Punkte      |
+| **Zeitraum**  | Heute, diese Woche, laufende Periode – oder frei gewählt                               |
+| **Extras**    | Optionaler Zielwert („wer zuerst 10 Abschlüsse") und ein Einsatz: Kaffee, Kuchen, Ehre |
+
+**Ein Duell verlangt keine Zusatzerfassung.** Jede Disziplin wird aus Daten gerechnet,
+die im Alltag ohnehin entstehen – aus den Provisionsbuchungen im Tracker, aus den
+Churn-Aktivitäten, aus den Challenge-Punkten. Wer ein Duell laufen hat, arbeitet
+einfach weiter.
+
+**Der Punktestand steht nirgends in der Datenbank.** Er wird bei jedem Aufruf neu aus
+den Buchungen im Zeitfenster gerechnet. Das hat eine Folge, die so gewollt ist: wird
+eine Buchung nachträglich storniert, fällt sie auch aus dem Duell heraus. Gewonnen hat,
+wer wirklich geliefert hat – nicht, wer zuerst einen Zähler hochgetreten hat.
+
+Eine Einladung zeigt den Stand schon an, bevor man sie annimmt. Auch das ist Absicht:
+wer um 16 Uhr zum Tagesduell gebeten wird, soll sehen können, was die Gegenseite bis
+dahin gebucht hat.
+
+---
+
 ## Wenn etwas nicht klappt
 
 **Schnellster Weg: `/api/health` aufrufen** (lokal `http://localhost:3000/api/health`).
@@ -156,8 +186,11 @@ Ein Test (`npm test`) prüft das Prisma-Schema gegen diese Zusage.
 
 > Einordnung: Vertrags- und Kundennummern sind _pseudonyme_ personenbezogene Daten,
 > keine anonymen. Der Ansatz senkt das Risiko deutlich, macht das Tool aber nicht
-> DSGVO-frei. Wichtiger noch: Provisionen und Leaderboard sind **Mitarbeiter**-Leistungsdaten
-> und damit nach § 87 BetrVG mitbestimmungspflichtig. Bevor echte Zahlen produktiv laufen,
+> DSGVO-frei. Wichtiger noch: Provisionen, Leaderboard und Duelle sind
+> **Mitarbeiter**-Leistungsdaten und damit nach § 87 BetrVG mitbestimmungspflichtig.
+> Die Duelle sind bewusst freiwillig – ohne Zusage wird niemand gewertet –, aber sie
+> machen Leistungsvergleiche zwischen Beschäftigten sichtbar und gehören deshalb
+> genauso vor den Betriebsrat wie das Leaderboard. Bevor echte Zahlen produktiv laufen,
 > müssen TNG-IT, Datenschutzbeauftragte und Betriebsrat eingebunden werden – unabhängig
 > davon, wo gehostet wird.
 

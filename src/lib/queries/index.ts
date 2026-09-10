@@ -1,13 +1,15 @@
 import { db } from '@/lib/db'
 
 export * from '@/lib/queries/commissions'
+export * from '@/lib/queries/duels'
 
 /**
  * Alle Datenabfragen der Dashboard-Seiten.
  *
- * Die Abfragen des Provisionsmoduls stehen wegen des Umfangs in der
- * Nachbardatei commissions.ts und werden hier wieder mit ausgegeben – fuer die
- * Seiten bleibt es bei einem einzigen Import aus '@/lib/queries'.
+ * Die Abfragen des Provisionsmoduls und der Duelle stehen wegen des Umfangs in
+ * den Nachbardateien commissions.ts und duels.ts und werden hier wieder mit
+ * ausgegeben – fuer die Seiten bleibt es bei einem einzigen Import aus
+ * '@/lib/queries'.
  *
  * Warum hier und nicht in den Seiten: Server-Components sollen rein bleiben –
  * Zeitbezuege wie Date.now() gehoeren nicht in den Render-Pfad. Ausserdem ist

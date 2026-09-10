@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, PhoneOff, Wallet, Trophy, Upload } from 'lucide-react'
+import { LayoutDashboard, PhoneOff, Swords, Wallet, Trophy, Upload } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 
@@ -11,6 +11,7 @@ const NAV = [
   { href: '/dashboard/churn', label: 'Churn-Leitfaden', icon: PhoneOff },
   { href: '/dashboard/commissions', label: 'Provisionen', icon: Wallet },
   { href: '/dashboard/challenges', label: 'Challenges', icon: Trophy },
+  { href: '/dashboard/duels', label: 'Duelle', icon: Swords },
 ] as const
 
 export function Sidebar({ isAdmin }: { isAdmin: boolean }) {

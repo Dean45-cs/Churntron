@@ -1,8 +1,9 @@
 # Churntron – Projektkonventionen
 
-Internes Vertriebs-Tool der TNG. Drei Module: Churn-Leitfaden, Provisionen, Challenges.
-Das Grundgerüst (Stage 1) steht, das Provisionsmodul (Stage 4) ist ausgebaut.
-Import, Churn-Fachlogik und Challenges folgen (siehe `PLAN.md`).
+Internes Vertriebs-Tool der TNG. Vier Module: Churn-Leitfaden, Provisionen, Challenges,
+Duelle. Das Grundgerüst (Stage 1) steht, das Provisionsmodul (Stage 4) ist ausgebaut,
+die Duelle (Stage 6) stehen. Import, Churn-Fachlogik und Challenges folgen
+(siehe `PLAN.md`).
 
 ## Die eine Regel, die nicht verhandelbar ist
 
@@ -21,7 +22,7 @@ Wenn der Test rot wird, ist das kein Formfehler – dann wurde die Zusage gebroc
 src/
   app/
     (dashboard)/        Route-Gruppe mit Auth-Guard, Sidebar und Topbar
-      dashboard/        Übersicht + die drei Module, je mit loading.tsx
+      dashboard/        Übersicht + die vier Module, je mit loading.tsx
     login/              Anmeldung (Server Action)
     api/auth/           NextAuth-Handler
   components/
@@ -35,10 +36,12 @@ src/
     queries/            ALLE Datenabfragen der Seiten
       index.ts            Übersicht, Churn, Challenges – und re-exportiert:
       commissions.ts      das Provisionsmodul (eigene Datei wegen des Umfangs)
+      duels.ts            die Duelle (eigene Datei wegen des Umfangs)
     commission-catalog.ts Provisionskatalog als Daten – Quelle für den Seed
     period.ts           Abrechnungsperioden 20. bis 20.
     time.ts             Tages-, Wochen- und Monatsgrenzen in Europe/Berlin
     earnings.ts         Verdienst-Auswertung (reine Rechnung, ohne Datenbank)
+    duels.ts            Duell-Auswertung (reine Rechnung, ohne Datenbank)
     brutto-netto.ts     Lohnsteuer, Soli, Sozialabgaben – reine Rechnung
     labels.ts           deutsche Beschriftungen der Enum-Werte
     utils.ts            cn, formatEuro, formatDate, initials, Eingabe-Parser
@@ -111,6 +114,29 @@ prüfen ihn über seine Eigenschaften – Stetigkeit an den Zonengrenzen, Monoto
 Deckelung an den Beitragsbemessungsgrenzen –, nicht auf den Cent gegen eine
 Lohnabrechnung.
 
+## Duelle
+
+Ein Duell ist 1 gegen 1 oder 2 gegen 2 zwischen Kolleginnen und Kollegen, um eine von
+sechs Kennzahlen in einem Zeitfenster. Zwei Dinge sind hier nicht verhandelbar:
+
+1. **Der Punktestand wird gerechnet, nicht gespeichert.** Es gibt keine Punktespalte
+   und keinen Zähler, der beim Buchen mitläuft. `src/lib/queries/duels.ts` lädt die
+   Rohzeilen (Provisionsbuchungen, Churn-Aktivitäten, Punkte), `src/lib/duels.ts`
+   rechnet daraus jeden Stand. Wird eine Buchung storniert, fällt sie auch aus dem
+   Duell heraus – gewonnen hat, wer wirklich geliefert hat.
+   Der Test in `src/lib/__tests__/schema-privacy.test.ts` hält das fest.
+2. **Ein Duell verlangt keine Zusatzerfassung.** Jede Metrik kommt aus Daten, die im
+   Alltag ohnehin entstehen. Wer ein Duell laufen hat, arbeitet einfach weiter. Eine
+   neue Metrik heißt deshalb: einen Enum-Wert in `DuelMetric`, einen Eintrag in
+   `METRIK_INFO` und einen Zweig in `punkteJeTeilnehmer` – sonst nichts.
+
+Die Zeitfenster laufen wie überall über `src/lib/time.ts` und `src/lib/period.ts`.
+Ein Tagesduell endet um Mitternacht deutscher Zeit, nicht um 02:00 Serverzeit.
+
+Ein noch nicht angenommenes Duell zeigt seinen Stand bereits an. Das ist Absicht: wer
+um 16 Uhr zum Tagesduell gebeten wird, soll vor dem Zusagen sehen, was die Gegenseite
+bis dahin gebucht hat.
+
 ## Design
 
 TNG-Farbwelt: Navy `#00336E` trägt Navigation und Primäraktionen, Orange `#F18700`
@@ -143,7 +169,7 @@ Der Seed enthält **nur erfundene Daten**. Keine echten Listen ins Repo.
 npm run lint && npm test && npm run build
 ```
 
-Bei Änderungen an den Provisionsseiten zusätzlich die Sichtprüfung:
+Bei Änderungen an den Provisions- oder Duellseiten zusätzlich die Sichtprüfung:
 
 ```bash
 npm run dev:skeletons                          # in einem zweiten Terminal
