@@ -102,16 +102,36 @@ unverändert so raus wie bisher.
 
 ### Neu: Stand der Schicht
 
-Über der Liste steht, wie weit die Schicht ist: **„47 von 120 geschafft"** mit Balken,
-daneben wie viele noch zu prüfen und wie viele noch unberührt sind. Dazu das Tempo –
-**wie viele in der letzten Stunde** – und, sobald genug vorliegt, wie lange der Rest bei
-diesem Tempo noch dauert.
+Über der Liste steht, wie weit die Schicht ist: **„47 von 120 bearbeitet"** mit Balken,
+darunter die Aufschlüsselung und das Tempo – **wie viele in der letzten Stunde** – und,
+sobald genug vorliegt, wie lange der Rest bei diesem Tempo noch dauert.
+
+**Arbeit ist nicht nur der Erledigt-Haken.** Wer anwählt, niemanden erreicht und „Nicht
+erreicht" notiert, hat diesen Kunden abgearbeitet – das kostet dieselbe Zeit wie ein
+Gespräch und zählt deshalb voll in Fortschritt und Tempo. Für die Auswertung bleibt er
+trotzdem offen und geht über die Restliste zurück an PP.
+
+Genau dafür hat der Balken **zwei Segmente**: voll eingefärbt, was wirklich erledigt
+ist, heller darüber, was bearbeitet wurde. Darunter steht es noch einmal als Zahl –
+„12 erledigt · 9 nur notiert · 73 unberührt".
 
 Die Hochrechnung ist eine Schätzung und wird gar nicht erst angezeigt, solange weniger
 als drei Vorgänge oder weniger als zehn Minuten Schicht vorliegen: aus drei Anrufen in
-fünf Minuten ließe sich alles Mögliche hochrechnen, nur nichts Verlässliches. Gerechnet
-wird aus dem Zeitstempel, der ohnehin schon je Datensatz mitläuft – es kommt keine
-zusätzliche Erfassung dazu. Der Tag beginnt dabei um Mitternacht **deutscher** Zeit.
+fünf Minuten ließe sich alles Mögliche hochrechnen, nur nichts Verlässliches. Geschätzt
+wird der Weg durch die **unberührten** – die bearbeiteten sind durch. Der Tag beginnt
+um Mitternacht **deutscher** Zeit.
+
+### Neu: Wann wurde angewählt
+
+Jede angefasste Karte trägt die Uhrzeit der letzten Anwahl – in der Liste sichtbar,
+ohne aufzuklappen: `✆ 16:34`, `✆ gestern 17:20`, `✆ 11.09. 09:14`. Gesetzt wird sie bei
+**jeder** Berührung, also auch dann, wenn nur eine Notiz entsteht.
+
+Das ist bewusst ein **eigener** Merker und nicht die Spalte `Bearbeitet_am` aus der
+Reporting-CSV: die meint Status und Formular und ist die Zusage an den Chef. Eine
+später getippte Notiz darf den Wert, den er zu sehen bekommt, nicht verschieben.
+Beide liegen getrennt im Browser-Speicher (`tng_lookup_ts_v1` und
+`tng_lookup_kontakt_v1`).
 
 ### Neu: Dubletten
 

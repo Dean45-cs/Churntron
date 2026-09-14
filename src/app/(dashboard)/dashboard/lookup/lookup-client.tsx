@@ -15,7 +15,7 @@ import { Input, Select } from '@/components/ui/field'
 import { Badge } from '@/components/ui/badge'
 import { buildReportingZeilen, reportingDateiname, zeilenAlsCsv } from '@/lib/lookup/export'
 import { findeDubletten, partnerBezeichnung } from '@/lib/lookup/dubletten'
-import { berechneFortschritt } from '@/lib/lookup/fortschritt'
+import { berechneFortschritt, formatiereAnwahl } from '@/lib/lookup/fortschritt'
 import { recKey } from '@/lib/lookup/parser'
 import { passt, suchText } from '@/lib/lookup/suche'
 import { abonniereMinute, jetztMinute, serverMinute } from '@/lib/lookup/uhr'
@@ -133,7 +133,12 @@ export function LookupClient() {
         } else {
           statusMap[key] = st
         }
-        return { ...alt, statusMap, tsMap: { ...alt.tsMap, [key]: jetzt } }
+        return {
+          ...alt,
+          statusMap,
+          tsMap: { ...alt.tsMap, [key]: jetzt },
+          kontaktMap: { ...alt.kontaktMap, [key]: jetzt },
+        }
       })
 
       if (st === 'done' && hatFormular) setFormKey(key)
@@ -143,11 +148,21 @@ export function LookupClient() {
 
   const setzeNotiz = useCallback((r: LookupRecord, wert: string) => {
     const key = recKey(r)
+    const jetzt = Date.now()
     aendereStand((alt) => {
       const notizMap = { ...alt.notizMap }
-      if (wert.trim()) notizMap[key] = wert
-      else delete notizMap[key]
-      return { ...alt, notizMap }
+      const kontaktMap = { ...alt.kontaktMap }
+      if (wert.trim()) {
+        notizMap[key] = wert
+        // Eine Notiz entsteht beim Anruf – auch dann, wenn niemand abgenommen
+        // hat. Genau das ist der Zeitpunkt, der auf der Karte stehen soll.
+        kontaktMap[key] = jetzt
+      } else {
+        delete notizMap[key]
+        // Notiz geloescht und kein Haken gesetzt: dann war da auch nichts.
+        if (!alt.statusMap[key]) delete kontaktMap[key]
+      }
+      return { ...alt, notizMap, kontaktMap }
     })
   }, [])
 
@@ -167,7 +182,12 @@ export function LookupClient() {
         const formMap = { ...alt.formMap }
         if (Object.keys(f).length) formMap[key] = f
         else delete formMap[key]
-        return { ...alt, formMap, tsMap: { ...alt.tsMap, [key]: jetzt } }
+        return {
+          ...alt,
+          formMap,
+          tsMap: { ...alt.tsMap, [key]: jetzt },
+          kontaktMap: { ...alt.kontaktMap, [key]: jetzt },
+        }
       })
     },
     [],
@@ -263,10 +283,7 @@ export function LookupClient() {
   // Render-Pfad – Begruendung in uhr.ts.
   const jetzt = useSyncExternalStore(abonniereMinute, jetztMinute, serverMinute)
 
-  const fortschritt = useMemo(
-    () => berechneFortschritt(keys, stand.statusMap, stand.tsMap, jetzt),
-    [keys, stand.statusMap, stand.tsMap, jetzt],
-  )
+  const fortschritt = useMemo(() => berechneFortschritt(keys, stand, jetzt), [keys, stand, jetzt])
 
   // Ueber ALLE Datensaetze, nicht nur die sichtbaren: der Zwilling einer Zeile
   // steht gern hinter dem Schnitt bei 300 oder ausserhalb der Suche.
@@ -487,12 +504,14 @@ export function LookupClient() {
             const r = records[i]!
             const key = recKey(r)
             const dublette = dubletten.get(i)
+            const kontakt = stand.kontaktMap[key]
             return (
               <LookupKarte
                 key={key + '|' + r._aoaIdx + '|' + r._file}
                 record={r}
                 status={stand.statusMap[key] ?? ''}
                 notiz={stand.notizMap[key] ?? ''}
+                angewaehlt={kontakt ? formatiereAnwahl(kontakt, jetzt) : undefined}
                 offen={offenKeys.has(key)}
                 dublette={dublette}
                 partner={dublette?.partner.map((p) => partnerBezeichnung(records[p]!))}

@@ -122,9 +122,12 @@ Datei ohne Speicher schlecht unterbringen.
   aus dem Umzug ein Datenschutzvorfall geworden.
 - SheetJS 0.20.3 liegt unter `src/vendor/sheetjs/` (Begründung im dortigen README)
   und wird erst beim ersten Dateizugriff nachgeladen.
-- **Stand der Schicht.** „47 von 120 geschafft" mit Balken, das Tempo der letzten
-  Stunde und – ab drei Erledigten und zehn Minuten Schicht – eine Restdauer-Schätzung.
-  Aus dem Zeitstempel gerechnet, der ohnehin mitläuft; keine zusätzliche Erfassung.
+- **Stand der Schicht.** „47 von 120 bearbeitet" mit zweiteiligem Balken (erledigt /
+  bearbeitet), das Tempo der letzten Stunde und – ab drei Vorgängen und zehn Minuten
+  Schicht – eine Restdauer-Schätzung. Ein „Nicht erreicht" zählt als Arbeit, bleibt für
+  die Auswertung aber offen. Aus dem Zeitstempel gerechnet, der ohnehin mitläuft.
+- **Anwahl-Zeitstempel.** Jede angefasste Karte zeigt, wann zuletzt gewählt wurde.
+  Eigener Merker (`kontaktMap`), damit die CSV-Spalte `Bearbeitet_am` unberührt bleibt.
 - **Dubletten.** Einträge mit gleicher Rufnummer, Kundennummer oder Vertragsnummer
   werden übergreifend zusammengefasst (Union-Find) und auf der Karte markiert, bevor
   gewählt wird. Bewusst nur markiert: zwei Verträge desselben Kunden können zwei

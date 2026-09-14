@@ -293,4 +293,24 @@ describe('Die internen Notizen bleiben intern', () => {
     const zeilen = buildReportingZeilen(records, stand)
     for (const z of zeilen) expect(z).toHaveLength(12)
   })
+
+  it('nimmt einen Eintrag, zu dem NUR eine Notiz steht, gar nicht erst auf', () => {
+    // „Nicht erreicht" zaehlt im Tool als Arbeit und faerbt den Fortschritt –
+    // in der Auswertung hat der Kunde aber nichts verloren. Er geht ueber die
+    // Restliste zurueck an PP, nicht ueber das Reporting an den Chef.
+    const nurNotiert = { ...stand, statusMap: {}, formMap: {} }
+    expect(buildReportingZeilen(records, nurNotiert)).toHaveLength(1) // nur der Kopf
+  })
+
+  it('nimmt den Zeitstempel aus tsMap, nicht aus einem Notiz-Zeitpunkt', () => {
+    // Die Spalte heisst "Bearbeitet_am" und meint Status und Formular.
+    // Eine spaeter getippte Notiz darf diesen Wert nicht verschieben –
+    // deshalb fuehrt der Schichtstand dafuer eine eigene kontaktMap.
+    const spaeterNotiert = {
+      ...stand,
+      kontaktMap: { u1: T + 3 * 3_600_000 },
+    } as ReportingStand
+    const zeilen = buildReportingZeilen(records, spaeterNotiert)
+    expect(zeilen[1]![11]).toBe('2026-09-14 08:05')
+  })
 })

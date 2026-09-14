@@ -1,6 +1,6 @@
 'use client'
 
-import { ChevronRight, Check, Flag, Mail, ExternalLink, Copy, CopyCheck } from 'lucide-react'
+import { ChevronRight, Check, Flag, Mail, ExternalLink, Copy, CopyCheck, Phone } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { dublettenText, type Dublette } from '@/lib/lookup/dubletten'
 import type { LookupRecord, StatusWert } from '@/lib/lookup/types'
@@ -63,6 +63,7 @@ export function LookupKarte({
   record,
   status,
   notiz,
+  angewaehlt,
   offen,
   dublette,
   partner,
@@ -75,6 +76,8 @@ export function LookupKarte({
   record: LookupRecord
   status: StatusWert
   notiz: string
+  /** Wann zuletzt angewaehlt, fertig formatiert. Fehlt, solange nichts geschah. */
+  angewaehlt?: string
   offen: boolean
   /** Gesetzt, wenn derselbe Anschluss mehrfach in der Liste steht. */
   dublette?: Dublette
@@ -154,7 +157,17 @@ export function LookupKarte({
               </Badge>
             ) : null}
           </span>
-          <span className="text-muted-foreground block truncate text-xs">{unterzeile}</span>
+          {/* Die Zeitangabe steht rechts in derselben Zeile: in der Liste
+              sichtbar, ohne der Vertragsnummer Platz wegzunehmen. */}
+          <span className="text-muted-foreground flex items-baseline justify-between gap-2 text-xs">
+            <span className="truncate">{unterzeile}</span>
+            {angewaehlt ? (
+              <span className="tabular shrink-0" title="Zuletzt angewählt">
+                <Phone className="mr-1 inline size-3 align-[-1px]" />
+                {angewaehlt}
+              </span>
+            ) : null}
+          </span>
         </button>
 
         <span className="order-2 ml-auto flex shrink-0 items-center gap-1 sm:order-3 sm:ml-0">
@@ -240,6 +253,15 @@ export function LookupKarte({
                   ))}
                 </div>
               </div>
+            </div>
+          ) : null}
+
+          {angewaehlt ? (
+            <div className="border-border/60 flex items-baseline gap-3 border-t px-5 py-2.5">
+              <span className="text-muted-foreground w-28 shrink-0 pt-0.5 text-[10.5px] font-semibold tracking-wide uppercase">
+                Angewählt
+              </span>
+              <span className="tabular flex-1 text-sm">{angewaehlt}</span>
             </div>
           ) : null}
 

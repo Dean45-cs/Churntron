@@ -203,10 +203,20 @@ Hier sind ebenfalls drei Dinge nicht verhandelbar:
 Zwei Dinge, die dazugekommen sind und beide nichts am Export ändern:
 
 - **Der Fortschritt behauptet kein Tempo, das er nicht kennt.** `berechneFortschritt`
-  liefert Stundenschnitt und Restdauer erst ab drei Erledigten und zehn Minuten
+  liefert Stundenschnitt und Restdauer erst ab drei Vorgängen und zehn Minuten
   Schicht, sonst `null`. Lieber keine Zahl als eine, die aus drei Anrufen entsteht.
   Die laufende Minute kommt aus `uhr.ts` über `useSyncExternalStore` – `Date.now()`
-  hat im Render-Pfad nichts zu suchen.
+  hat im Render-Pfad nichts zu suchen. Weil diese Minute der echten Uhr bis zu 60 s
+  hinterherhinkt, hat die Zukunfts-Sperre eine Toleranz: ohne sie fiele ein gerade
+  gesetzter Haken aus dem Tempo heraus.
+- **Arbeit ist jede Berührung, nicht nur der Haken.** Ein Eintrag mit Notiz
+  („Nicht erreicht") zählt voll in Fortschritt und Tempo – der Anruf hat stattgefunden.
+  Für die Auswertung bleibt er offen: er steht in keiner Reporting-Zeile und geht über
+  die Restliste zurück an PP. Deshalb hat der Balken zwei Segmente statt eines.
+- **Zwei Zeitstempel, zwei Aufgaben.** `tsMap` füllt die CSV-Spalte `Bearbeitet_am` und
+  wird nur von Status und Formular fortgeschrieben. `kontaktMap` merkt sich jede
+  Berührung inklusive Notiz und trägt die Anzeige auf der Karte sowie den Fortschritt.
+  Wer beide zusammenlegt, verschiebt einen Wert, den der Chef zu sehen bekommt.
 - **Dubletten werden markiert, nicht abgehakt.** Zwei Verträge desselben Kunden können
   zwei Reportings brauchen; automatisch mitzumarkieren würde still die Auswertung
   verändern. Die wichtigste Regel in `findeDubletten`: leere Felder sind kein Merkmal –

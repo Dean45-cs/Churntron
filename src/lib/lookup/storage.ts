@@ -24,18 +24,31 @@ const KEY_FORMS = 'tng_lookup_forms_v1'
 const KEY_TS = 'tng_lookup_ts_v1'
 /** Neu in Churntron: die internen Notizen. */
 const KEY_NOTIZEN = 'tng_lookup_notes_v1'
+/** Und der Zeitpunkt, an dem der Kunde angewaehlt wurde. */
+const KEY_KONTAKT = 'tng_lookup_kontakt_v1'
 
 export type Schichtstand = {
   statusMap: Record<string, StatusWert>
   formMap: Record<string, FormularStand>
-  /** Zeitpunkt der letzten Aenderung je Datensatz – Spalte "Bearbeitet_am". */
+  /**
+   * Zeitpunkt der letzten Aenderung an Status oder Formular – und NUR daran.
+   * Diese Map fuellt die CSV-Spalte "Bearbeitet_am"; eine getippte Notiz darf
+   * den Wert nicht verschieben, den der Chef zu sehen bekommt. Wer wissen
+   * will, wann angewaehlt wurde, nimmt `kontaktMap`.
+   */
   tsMap: Record<string, number>
   /** Freitext je Datensatz. Bleibt intern, siehe export.ts. */
   notizMap: Record<string, string>
+  /**
+   * Wann der Kunde zuletzt angewaehlt wurde: gesetzt bei JEDER Beruehrung,
+   * also auch dann, wenn nur eine Notiz entsteht ("Nicht erreicht"). Traegt
+   * die Zeitangabe auf der Karte und den Fortschritt. Rein intern.
+   */
+  kontaktMap: Record<string, number>
 }
 
 export function leererStand(): Schichtstand {
-  return { statusMap: {}, formMap: {}, tsMap: {}, notizMap: {} }
+  return { statusMap: {}, formMap: {}, tsMap: {}, notizMap: {}, kontaktMap: {} }
 }
 
 function lies<T>(key: string): Record<string, T> {
@@ -69,6 +82,7 @@ export function ladeStand(): Schichtstand {
     formMap: lies<FormularStand>(KEY_FORMS),
     tsMap: lies<number>(KEY_TS),
     notizMap: lies<string>(KEY_NOTIZEN),
+    kontaktMap: lies<number>(KEY_KONTAKT),
   }
 }
 
@@ -77,6 +91,7 @@ export function speichereStand(stand: Schichtstand) {
   schreib(KEY_FORMS, stand.formMap)
   schreib(KEY_TS, stand.tsMap)
   schreib(KEY_NOTIZEN, stand.notizMap)
+  schreib(KEY_KONTAKT, stand.kontaktMap)
 }
 
 /* ---------------------------------------------------------------------------
