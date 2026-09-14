@@ -1,6 +1,7 @@
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StatCardGridSkeleton } from '@/components/skeletons/stat-card-skeleton'
+import { ZeitraumVergleichSkeleton } from '@/components/skeletons/zeitraum-vergleich-skeleton'
 
 /**
  * Ladezustand des Tastenfeldes. Die Kacheln haben dieselbe Hoehe wie die
@@ -10,7 +11,8 @@ import { StatCardGridSkeleton } from '@/components/skeletons/stat-card-skeleton'
 export function TrackerSkeleton() {
   return (
     <div className="flex flex-col gap-6">
-      <StatCardGridSkeleton />
+      <StatCardGridSkeleton count={3} />
+      <ZeitraumVergleichSkeleton fussnote />
 
       <Card>
         <div className="border-border flex flex-wrap items-center justify-between gap-4 border-b px-6 py-5">

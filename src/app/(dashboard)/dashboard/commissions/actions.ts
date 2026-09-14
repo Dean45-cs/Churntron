@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import type { CommissionStatus } from '@prisma/client'
-import { auth } from '@/lib/auth'
+import type { ActionErgebnis } from '@/lib/actions'
+import { angemeldeterNutzer } from '@/lib/session'
 import { db } from '@/lib/db'
 import { periodeVon } from '@/lib/period'
 import { eingabeAlsCents } from '@/lib/utils'
@@ -17,15 +18,7 @@ import { eingabeAlsCents } from '@/lib/utils'
  *    filtert zusaetzlich auf userId, auch wenn die ID aus der eigenen Seite kommt.
  */
 
-export type ActionErgebnis = { ok: true; hinweis?: string } | { ok: false; fehler: string }
-
 const PFAD = '/dashboard/commissions'
-
-async function angemeldet() {
-  const session = await auth()
-  if (!session?.user?.id) throw new Error('Nicht angemeldet')
-  return session.user
-}
 
 function aktualisiere() {
   revalidatePath(PFAD)
@@ -44,7 +37,7 @@ export async function buchen(input: {
   externalRef?: string | null
   note?: string | null
 }): Promise<ActionErgebnis> {
-  const user = await angemeldet()
+  const user = await angemeldeterNutzer()
 
   const regel = await db.commissionRule.findUnique({ where: { key: input.key } })
   if (!regel || !regel.active) return { ok: false, fehler: 'Diesen Satz gibt es im Katalog nicht.' }
@@ -74,7 +67,7 @@ export async function buchen(input: {
 
 /** Vertippt – die Buchung wieder wegnehmen. Nur die eigene, nur eine offene. */
 export async function buchungZuruecknehmen(id: string): Promise<ActionErgebnis> {
-  const user = await angemeldet()
+  const user = await angemeldeterNutzer()
 
   const buchung = await db.commission.findFirst({ where: { id, userId: user.id } })
   if (!buchung) return { ok: false, fehler: 'Buchung nicht gefunden.' }
@@ -95,7 +88,7 @@ const ERLAUBTE_STATUS: CommissionStatus[] = ['PENDING', 'APPROVED', 'PAID', 'CLA
 
 /** Statuswechsel einer einzelnen Position, z. B. beim Durchgehen der Abrechnung. */
 export async function statusSetzen(id: string, status: CommissionStatus): Promise<ActionErgebnis> {
-  const user = await angemeldet()
+  const user = await angemeldeterNutzer()
   if (!ERLAUBTE_STATUS.includes(status)) return { ok: false, fehler: 'Unbekannter Status.' }
 
   const { count } = await db.commission.updateMany({
@@ -110,7 +103,7 @@ export async function statusSetzen(id: string, status: CommissionStatus): Promis
 
 /** Die Vertragsnummer nachtragen, wenn sie beim Buchen noch nicht zur Hand war. */
 export async function referenzSetzen(id: string, externalRef: string): Promise<ActionErgebnis> {
-  const user = await angemeldet()
+  const user = await angemeldeterNutzer()
   const { count } = await db.commission.updateMany({
     where: { id, userId: user.id },
     data: { externalRef: externalRef.trim().slice(0, 64) || null },
@@ -130,7 +123,7 @@ export async function referenzSetzen(id: string, externalRef: string): Promise<A
  * hilft eine Liste, in der noch steht, was noch nicht bezahlt wurde.
  */
 export async function auszahlungPruefen(formData: FormData): Promise<ActionErgebnis> {
-  const user = await angemeldet()
+  const user = await angemeldeterNutzer()
 
   const periode = String(formData.get('periode') ?? '')
   if (!/^\d{4}-\d{2}$/.test(periode)) return { ok: false, fehler: 'Periode fehlt.' }
@@ -190,7 +183,7 @@ export async function auszahlungPruefen(formData: FormData): Promise<ActionErgeb
 
 /** Alle offenen Positionen einer Periode abhaken – nach geklaerter Rückfrage. */
 export async function periodeAbhaken(periode: string): Promise<ActionErgebnis> {
-  const user = await angemeldet()
+  const user = await angemeldeterNutzer()
   if (!/^\d{4}-\d{2}$/.test(periode)) return { ok: false, fehler: 'Periode fehlt.' }
 
   const { count } = await db.commission.updateMany({
@@ -210,7 +203,7 @@ const ZAHL = (formData: FormData, feld: string, standard: number) => {
 
 /** Wochenstunden und Steuermerkmale – Grundlage von Stundenschnitt und Rechner. */
 export async function einstellungenSpeichern(formData: FormData): Promise<ActionErgebnis> {
-  const user = await angemeldet()
+  const user = await angemeldeterNutzer()
 
   const weeklyHours = Math.min(80, Math.max(1, ZAHL(formData, 'wochenstunden', 40)))
   const workDaysPerWeek = Math.min(7, Math.max(1, Math.round(ZAHL(formData, 'arbeitstage', 5))))

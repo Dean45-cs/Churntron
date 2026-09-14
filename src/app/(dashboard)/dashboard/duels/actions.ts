@@ -2,8 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import type { DuelMetric, DuelMode } from '@prisma/client'
-import { auth } from '@/lib/auth'
+import type { ActionErgebnis } from '@/lib/actions'
 import { db } from '@/lib/db'
+import { angemeldeterNutzer } from '@/lib/session'
 import { METRIK_INFO, SEITEN_GROESSE, vorlagenZeitraum, type ZeitraumVorlage } from '@/lib/duels'
 import { ausTeilen } from '@/lib/time'
 import { eingabeAlsCents } from '@/lib/utils'
@@ -12,21 +13,14 @@ import { eingabeAlsCents } from '@/lib/utils'
  * Schreibende Vorgaenge des Duell-Moduls.
  *
  * Dieselben zwei Regeln wie im Provisionsmodul:
- * 1. Die Anmeldung wird selbst geprueft – Server Actions sind ueber einen
- *    direkten POST erreichbar, nicht nur ueber die eigene Oberflaeche.
+ * 1. Die Anmeldung wird selbst geprueft, ueber angemeldeterNutzer() und damit
+ *    gegen die Datenbank – Server Actions sind ueber einen direkten POST
+ *    erreichbar, nicht nur ueber die eigene Oberflaeche.
  * 2. Es wird nur an Duellen gearbeitet, an denen man selbst beteiligt ist.
  *    Jede Abfrage filtert zusaetzlich auf die eigene userId.
  */
 
-export type ActionErgebnis = { ok: true; hinweis?: string } | { ok: false; fehler: string }
-
 const PFAD = '/dashboard/duels'
-
-async function angemeldet() {
-  const session = await auth()
-  if (!session?.user?.id) throw new Error('Nicht angemeldet')
-  return session.user
-}
 
 function aktualisiere() {
   revalidatePath(PFAD)
@@ -84,7 +78,7 @@ function idsAus(formData: FormData, feld: string) {
  * deutscher Zeit und nicht um 02:00, weil der Server in UTC laeuft.
  */
 export async function duellStarten(formData: FormData): Promise<ActionErgebnis> {
-  const user = await angemeldet()
+  const user = await angemeldeterNutzer()
   const jetzt = new Date()
   await abgelaufeneNachziehen(jetzt)
 
@@ -215,7 +209,7 @@ function leseZiel(formData: FormData, metric: DuelMetric): number | null | 'ungu
  * was die Gegenseite bis dahin schon gebucht hat, bevor er zusagt.
  */
 export async function einladungAnnehmen(duelId: string): Promise<ActionErgebnis> {
-  const user = await angemeldet()
+  const user = await angemeldeterNutzer()
   const jetzt = new Date()
 
   const duell = await db.duel.findFirst({
@@ -248,7 +242,7 @@ export async function einladungAnnehmen(duelId: string): Promise<ActionErgebnis>
 
 /** Absagen. Ob als eingeladene Person oder als Herausforderer – das Duell ist damit durch. */
 export async function einladungAblehnen(duelId: string): Promise<ActionErgebnis> {
-  const user = await angemeldet()
+  const user = await angemeldeterNutzer()
 
   const teilnahme = await db.duelParticipant.findFirst({ where: { duelId, userId: user.id } })
   if (!teilnahme) return { ok: false, fehler: 'Duell nicht gefunden.' }
@@ -268,7 +262,7 @@ export async function einladungAblehnen(duelId: string): Promise<ActionErgebnis>
  * einvernehmlich gedacht – ein Ergebnis wird nicht mehr gewertet.
  */
 export async function duellAbsagen(duelId: string): Promise<ActionErgebnis> {
-  const user = await angemeldet()
+  const user = await angemeldeterNutzer()
 
   const { count } = await db.duel.updateMany({
     where: { id: duelId, createdById: user.id, status: { in: ['OPEN', 'RUNNING'] } },

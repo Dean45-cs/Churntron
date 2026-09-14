@@ -2,9 +2,10 @@ import { Coffee, Swords, Target, Timer, Trophy } from 'lucide-react'
 import type { DuellAnsicht, DuellSeiteAnsicht } from '@/lib/queries'
 import { METRIK_INFO } from '@/lib/duels'
 import { DUEL_METRIC_LABEL, DUEL_MODE_LABEL, DUEL_PHASE_LABEL } from '@/lib/labels'
+import { Avatar } from '@/components/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { cn, initials } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 import { DuellAktionen } from './duell-aktionen'
 
 /**
@@ -91,7 +92,10 @@ export function DuellKarte({ duell }: { duell: DuellAnsicht }) {
                 style={{ width: `${seite.anteil}%` }}
                 className={cn(
                   'h-full transition-[width] duration-500',
-                  i === 0 ? 'bg-primary' : 'bg-muted-foreground/40',
+                  // Die Gegenseite muss sich vom leeren Balken abheben: steht es
+                  // 0 zu etwas, ist ihre Haelfte die ganze Breite – und die darf
+                  // dann nicht wie ein ungefuellter Balken aussehen.
+                  i === 0 ? 'bg-primary' : 'bg-muted-foreground/55',
                 )}
               />
             ))}
@@ -144,17 +148,15 @@ function SeitenSpalte({ seite, rechts }: { seite: DuellSeiteAnsicht; rechts: boo
             key={m.userId}
             className={cn('flex items-center gap-2', rechts && 'flex-row-reverse')}
           >
-            <span
-              className={cn(
-                'grid size-7 shrink-0 place-items-center rounded-full text-[10px] font-bold',
-                m.binIch
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-secondary-foreground',
-              )}
-              title={m.team ?? undefined}
-            >
-              {initials(m.name)}
-            </span>
+            <Avatar
+              userId={m.userId}
+              displayName={m.name}
+              version={m.avatarVersion}
+              groesse="sm"
+              // Ohne Bild bleiben die Initialen – die eigene Seite traegt Navy,
+              // damit man sich auf der Karte sofort findet.
+              className={cn(m.binIch && !m.avatarVersion && 'bg-primary text-primary-foreground')}
+            />
             <span className="min-w-0">
               <span className="block truncate text-sm leading-tight font-medium">
                 {m.binIch ? 'Du' : m.name}

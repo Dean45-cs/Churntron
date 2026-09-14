@@ -1,9 +1,10 @@
 import { Suspense } from 'react'
 import { Swords, Trophy } from 'lucide-react'
-import { auth } from '@/lib/auth'
+import { nutzerOderAnmeldung } from '@/lib/session'
 import { devDelay } from '@/lib/dev'
 import { getDuellRangliste, getKollegen, getMeineDuelle } from '@/lib/queries'
-import { formatZahl, initials } from '@/lib/utils'
+import { formatZahl } from '@/lib/utils'
+import { Avatar } from '@/components/avatar'
 import { PageHeader } from '@/components/page-header'
 import { StatCard } from '@/components/stat-card'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,8 +23,7 @@ import { DuellStarten } from './duell-starten'
  * getrennte Abfragen – die Rangliste soll die eigene Liste nicht aufhalten.
  */
 export default async function DuelsPage() {
-  const session = await auth()
-  const userId = session!.user.id
+  const { id: userId } = await nutzerOderAnmeldung()
 
   return (
     <>
@@ -148,9 +148,7 @@ async function Rangliste() {
               >
                 {i + 1}
               </span>
-              <span className="bg-secondary text-secondary-foreground grid size-9 place-items-center rounded-full text-xs font-semibold">
-                {initials(z.name)}
-              </span>
+              <Avatar userId={z.userId} displayName={z.name} version={z.avatarVersion} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{z.name}</p>
                 <p className="text-muted-foreground text-xs">

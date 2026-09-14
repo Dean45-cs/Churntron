@@ -21,14 +21,20 @@ import { einstellungenSpeichern } from '../actions'
  * nur, was dauerhaft gilt – die eigenen Angaben. Der Provisionsbetrag daneben
  * ist ein Was-waere-wenn und geht niemanden etwas an.
  */
+/**
+ * Ein Vorschlag zum Uebernehmen: der eigene Stand im Kalendermonat und im
+ * Abrechnungszeitraum. Beide stehen zur Wahl, weil beide eine berechtigte
+ * Frage beantworten – „was habe ich diesen Monat gemacht" und „was kommt
+ * auf der naechsten Abrechnung an".
+ */
+export type Vorschlag = { art: string; label: string; spanne: string; cents: number }
+
 export function RechnerForm({
   profil,
-  provisionVorschlagCents,
-  periodenLabel,
+  vorschlaege,
 }: {
   profil: Arbeitsprofil
-  provisionVorschlagCents: number
-  periodenLabel: string
+  vorschlaege: Vorschlag[]
 }) {
   const [werte, setWerte] = useState({
     grundgehalt: centsAlsEingabe(profil.grundgehaltCents),
@@ -41,7 +47,9 @@ export function RechnerForm({
     wochenstunden: String(profil.wochenstunden).replace('.', ','),
     arbeitstage: String(profil.arbeitstageProWoche),
   })
-  const [provision, setProvision] = useState(centsAlsEingabe(provisionVorschlagCents))
+  // Vorbelegt ist der Abrechnungszeitraum – das ist der Betrag, der tatsaechlich
+  // ueberwiesen wird und um den es beim Netto geht.
+  const [provision, setProvision] = useState(centsAlsEingabe(vorschlaege[0]?.cents ?? 0))
   const [hinweis, setHinweis] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -220,14 +228,18 @@ export function RechnerForm({
                 className="tabular font-mono text-lg"
               />
             </Field>
-            <button
-              type="button"
-              onClick={() => setProvision(centsAlsEingabe(provisionVorschlagCents))}
-              className="text-primary mt-2 text-xs font-medium hover:underline"
-            >
-              Gebuchte Provision der Periode {periodenLabel} übernehmen (
-              {formatEuro(provisionVorschlagCents)})
-            </button>
+            <div className="mt-2 flex flex-col gap-1">
+              {vorschlaege.map((v) => (
+                <button
+                  key={v.art}
+                  type="button"
+                  onClick={() => setProvision(centsAlsEingabe(v.cents))}
+                  className="text-primary text-left text-xs font-medium hover:underline"
+                >
+                  {v.label} ({v.spanne}) übernehmen: {formatEuro(v.cents)}
+                </button>
+              ))}
+            </div>
 
             <div className="bg-accent-subtle mt-5 rounded-2xl px-5 py-4">
               <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">

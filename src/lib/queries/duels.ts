@@ -53,6 +53,8 @@ export type DuellMitspieler = {
   userId: string
   name: string
   team: string | null
+  /** Kennung des Profilbildes, oder null. Traegt die Bild-URL in <Avatar/>. */
+  avatarVersion: string | null
   wert: number
   /** Der Wert als Text in der Einheit der Metrik – fertig fuer die Anzeige. */
   wertText: string
@@ -113,7 +115,15 @@ export type DuellUebersicht = {
 const MIT_TEILNEHMERN = {
   participants: {
     include: {
-      user: { select: { id: true, displayName: true, team: { select: { name: true } } } },
+      user: {
+        select: {
+          id: true,
+          displayName: true,
+          team: { select: { name: true } },
+          // Nur die Version, nie die Bytes – die holt allein die Bild-Route.
+          avatar: { select: { version: true } },
+        },
+      },
     },
   },
   createdBy: { select: { displayName: true } },
@@ -307,6 +317,7 @@ function baueAnsicht(d: DuellZeile, userId: string, roh: Rohdaten, jetzt: Date):
         userId: m.userId,
         name: m.name,
         team: zeile?.user.team?.name ?? null,
+        avatarVersion: zeile?.user.avatar?.version ?? null,
         wert: m.wert,
         wertText: formatMetrik(d.metric, m.wert),
         angenommen: m.angenommen,
@@ -420,7 +431,10 @@ export async function getDuellRangliste(tage = 30) {
   })
 
   const roh = await ladeRohdaten(duelle)
-  const tabelle = new Map<string, { name: string; team: string | null } & Bilanz>()
+  const tabelle = new Map<
+    string,
+    { name: string; team: string | null; avatarVersion: string | null } & Bilanz
+  >()
 
   for (const d of duelle) {
     const ansicht = baueAnsicht(d, '', roh, jetzt)
@@ -431,6 +445,7 @@ export async function getDuellRangliste(tage = 30) {
         const eintrag = tabelle.get(m.userId) ?? {
           name: m.name,
           team: m.team,
+          avatarVersion: m.avatarVersion,
           siege: 0,
           niederlagen: 0,
           unentschieden: 0,

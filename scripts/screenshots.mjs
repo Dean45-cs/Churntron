@@ -15,6 +15,8 @@ const BASE = 'http://localhost:3000'
 const PAGES = [
   ['dashboard', '/dashboard'],
   ['churn', '/dashboard/churn'],
+  ['gespraech', '/dashboard/gespraech'],
+  ['wiki', '/dashboard/wiki'],
   ['commissions', '/dashboard/commissions'],
   ['commissions-verdienst', '/dashboard/commissions/verdienst'],
   ['commissions-rechner', '/dashboard/commissions/rechner'],
@@ -22,6 +24,10 @@ const PAGES = [
   ['commissions-katalog', '/dashboard/commissions/katalog'],
   ['challenges', '/dashboard/challenges'],
   ['duels', '/dashboard/duels'],
+  ['konto', '/dashboard/konto'],
+  ['konto-anzeige', '/dashboard/konto/anzeige'],
+  ['konto-sicherheit', '/dashboard/konto/sicherheit'],
+  ['verwaltung-nutzer', '/dashboard/verwaltung/nutzer'],
 ]
 
 const browser = await chromium.launch({

@@ -21,7 +21,9 @@ export function AbgleichSkeleton() {
             ))}
             <Skeleton className="h-10 w-28 rounded-xl sm:col-span-3" />
           </div>
-          <Skeleton className="h-[168px] w-full rounded-2xl" />
+          {/* Der Differenzkasten traegt jetzt auch den Kalendermonat – die
+              Hoehe muss mit abgleich-panel.tsx zusammenpassen. */}
+          <Skeleton className="h-[240px] w-full rounded-2xl" />
         </div>
       </Card>
 

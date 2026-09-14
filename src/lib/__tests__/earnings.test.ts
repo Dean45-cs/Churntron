@@ -142,6 +142,65 @@ describe('Verdienst-Auswertung', () => {
       'alles',
       JETZT,
     )
-    expect(a.jeMonat.map((m) => m.schluessel)).toEqual(['2026-07', '2026-08', '2026-09'])
+    expect(a.verlauf.monat.map((m) => m.schluessel)).toEqual(['2026-07', '2026-08', '2026-09'])
+  })
+})
+
+/**
+ * Der Punkt, an dem sich die beiden Zuschnitte unterscheiden, ist der Stichtag:
+ * eine Buchung vom 25. August steht im Kalendermonat August, aber schon im
+ * Abrechnungszeitraum, der im September endet. Wer nur eine der beiden Zahlen
+ * sieht, haelt sie fuer die andere – deshalb wird beides ausgewiesen.
+ */
+describe('Kalendermonat und Abrechnungszeitraum', () => {
+  const buchungen = [
+    buchung(ausTeilen(2026, 8, 19, 9), 100), // August, Abrechnung August
+    buchung(ausTeilen(2026, 8, 25, 9), 100), // August, Abrechnung September
+    buchung(ausTeilen(2026, 9, 5, 9), 100), // September, Abrechnung September
+  ]
+
+  it('zaehlt dieselben Buchungen in beiden Zuschnitten getrennt', () => {
+    const a = werteVerdienstAus(buchungen, profil, 'alles', JETZT)
+
+    expect(a.zeitraeume.monat.anzahl).toBe(1)
+    expect(a.zeitraeume.monat.summeCents).toBe(100)
+    expect(a.zeitraeume.periode.anzahl).toBe(2)
+    expect(a.zeitraeume.periode.summeCents).toBe(200)
+  })
+
+  it('beschriftet beide laufenden Zeitraeume fertig fuer die Ansicht', () => {
+    const a = werteVerdienstAus(buchungen, profil, 'alles', JETZT)
+
+    expect(a.laufend.monat.spanne).toBe('01.09. – 30.09.2026')
+    expect(a.laufend.periode.spanne).toBe('20.08. – 19.09.2026')
+    expect(a.laufend.monat.name).toBe('September 2026')
+    expect(a.laufend.periode.name).toBe('September 2026')
+  })
+
+  it('fuehrt den Verlauf in beiden Zuschnitten', () => {
+    const a = werteVerdienstAus(buchungen, profil, 'alles', JETZT)
+
+    expect(a.verlauf.monat.map((m) => [m.schluessel, m.anzahl])).toEqual([
+      ['2026-08', 2],
+      ['2026-09', 1],
+    ])
+    expect(a.verlauf.periode.map((m) => [m.schluessel, m.anzahl])).toEqual([
+      ['2026-08', 1],
+      ['2026-09', 2],
+    ])
+  })
+
+  it('laesst eine Buchung ab dem Stichtag nicht mehr in den laufenden Zeitraum', () => {
+    // Der 20.09. gehoert schon zur Abrechnung, die am 19.10. endet.
+    const a = werteVerdienstAus(
+      [...buchungen, buchung(ausTeilen(2026, 9, 20, 9), 100)],
+      profil,
+      'alles',
+      ausTeilen(2026, 9, 21, 12),
+    )
+    expect(a.laufend.periode.schluessel).toBe('2026-10')
+    expect(a.zeitraeume.periode.anzahl).toBe(1)
+    // Im Kalendermonat September zaehlen die beiden September-Buchungen.
+    expect(a.zeitraeume.monat.anzahl).toBe(2)
   })
 })
