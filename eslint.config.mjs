@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     'out/**',
     'build/**',
     'next-env.d.ts',
+    // Mitgelieferte SheetJS-Build – Fremdcode, siehe src/vendor/sheetjs/README.md
+    'src/vendor/**',
   ]),
 ])
 

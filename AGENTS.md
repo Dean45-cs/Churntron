@@ -1,7 +1,8 @@
 # Churntron – Projektkonventionen
 
-Internes Vertriebs-Tool der TNG. Drei Module: Churn-Leitfaden, Provisionen, Challenges.
-Das Grundgerüst (Stage 1) steht, das Provisionsmodul (Stage 4) ist ausgebaut.
+Internes Vertriebs-Tool der TNG. Module: Kampagnen-Lookup, Churn-Leitfaden,
+Provisionen, Challenges. Das Grundgerüst (Stage 1) steht, das Provisionsmodul (Stage 4)
+ist ausgebaut, das Kampagnen-Lookup ist aus der alten HTML-Datei übernommen.
 Import, Churn-Fachlogik und Challenges folgen (siehe `PLAN.md`).
 
 ## Die eine Regel, die nicht verhandelbar ist
@@ -9,11 +10,25 @@ Import, Churn-Fachlogik und Challenges folgen (siehe `PLAN.md`).
 **In der Datenbank stehen keine Klardaten von Kundinnen und Kunden.**
 Kein Name, keine Adresse, keine Telefonnummer, keine E-Mail – auch nicht als Testdaten.
 Der Bezug zum Kunden läuft ausschließlich über `Contract.externalRef`
-(Vertrags- bzw. Kundennummer). Die Klardaten bleiben im lokalen Kampagnen-Lookup,
-das offline auf dem Rechner der Vertriebler läuft.
+(Vertrags- bzw. Kundennummer).
 
 `src/lib/__tests__/schema-privacy.test.ts` prüft das gegen `prisma/schema.prisma`.
 Wenn der Test rot wird, ist das kein Formfehler – dann wurde die Zusage gebrochen.
+
+### Und das Kampagnen-Lookup?
+
+Das Lookup sieht Klardaten – es ist der Dialer, ohne Namen und Rufnummern wäre es
+sinnlos. Es darf sie sehen, **weil es den Browser nicht verlässt**: Die Liste wird
+lokal gelesen, lokal durchsucht und lokal wieder ausgegeben. Markierungen, Formulare
+und Notizen liegen im `localStorage`.
+
+Deshalb gilt in `src/lib/lookup/` und `src/app/(dashboard)/dashboard/lookup/`:
+
+**kein `fetch`, kein `'use server'`, kein Prisma, kein `@/lib/queries`.**
+
+`src/lib/__tests__/lookup-privacy.test.ts` prüft das gegen den Quelltext. Wer dort
+eine Server Action einbaut, macht aus einem lokalen Werkzeug eine Datenübertragung –
+und genau das ist der Fall, den die Regel oben verhindern soll.
 
 ## Ordnerstruktur
 
@@ -21,7 +36,8 @@ Wenn der Test rot wird, ist das kein Formfehler – dann wurde die Zusage gebroc
 src/
   app/
     (dashboard)/        Route-Gruppe mit Auth-Guard, Sidebar und Topbar
-      dashboard/        Übersicht + die drei Module, je mit loading.tsx
+      dashboard/        Übersicht + die Module, je mit loading.tsx
+        lookup/         Kampagnen-Lookup – LÄUFT NUR IM BROWSER (siehe oben)
     login/              Anmeldung (Server Action)
     api/auth/           NextAuth-Handler
   components/
@@ -35,6 +51,13 @@ src/
     queries/            ALLE Datenabfragen der Seiten
       index.ts            Übersicht, Churn, Challenges – und re-exportiert:
       commissions.ts      das Provisionsmodul (eigene Datei wegen des Umfangs)
+    lookup/             Kampagnen-Lookup, reine Logik – ohne DOM, ohne Datenbank
+      parser.ts           Spaltenerkennung und Telefon-Aufbereitung (1:1 portiert)
+      export.ts           Reporting-CSV und Restliste – strukturgleich zum alten Tool
+      storage.ts          Schichtstand im localStorage, inkl. der internen Notizen
+      suche.ts            Suchtext je Datensatz
+      xlsx.ts             Brücke zu SheetJS (nachgeladen, nur im Browser)
+      types.ts
     commission-catalog.ts Provisionskatalog als Daten – Quelle für den Seed
     period.ts           Abrechnungsperioden 20. bis 20.
     time.ts             Tages-, Wochen- und Monatsgrenzen in Europe/Berlin
@@ -43,6 +66,8 @@ src/
     labels.ts           deutsche Beschriftungen der Enum-Werte
     utils.ts            cn, formatEuro, formatDate, initials, Eingabe-Parser
     dev.ts              devDelay für die Skeleton-Demo
+  vendor/
+    sheetjs/            mitgelieferte SheetJS-Build 0.20.3 – Herkunft im README
 ```
 
 Seiten importieren weiterhin aus `@/lib/queries` – die Aufteilung in zwei Dateien
@@ -110,6 +135,29 @@ Gesetzgeber sie, und dann soll genau ein Block angefasst werden müssen. Die Tes
 prüfen ihn über seine Eigenschaften – Stetigkeit an den Zonengrenzen, Monotonie,
 Deckelung an den Beitragsbemessungsgrenzen –, nicht auf den Cent gegen eine
 Lohnabrechnung.
+
+## Kampagnen-Lookup
+
+Hier sind ebenfalls drei Dinge nicht verhandelbar:
+
+1. **Die beiden Exporte sind strukturgleich zum alten Tool.** Reporting-CSV: dieselben
+   zwölf Spalten in derselben Reihenfolge, BOM, Semikolon, CRLF, Formel-Entschärfung.
+   Restliste: Vorspann, Kopfzeile, Spaltenbreiten, Blattname und Originalwerte
+   unverändert, nur ohne die erledigten Zeilen. Auf der Gegenseite hängen eine
+   Power-BI-Auswertung und ein eingespielter Ablauf – eine zusätzliche Spalte ist dort
+   kein Zugewinn, sondern ein kaputter Import. `lookup-export.test.ts` hält das fest.
+2. **Die internen Notizen bleiben intern.** Sie sind das, was das Modul dem alten Tool
+   voraushat, und sie stehen in keinem Export. `buildReportingZeilen` nimmt sie nicht
+   einmal entgegen.
+3. **Nichts verlässt den Browser.** Siehe oben – der Grund, warum das Modul hier
+   stehen darf.
+
+Der Parser ist 1:1 aus `kampagnen_lookup_v1.1.0.html` übernommen und nur getypt.
+Er läuft seit Monaten gegen die echten PP-Listen; jede „Verbesserung" beim Portieren
+wäre eine Wette gegen Listen, die hier niemand vorliegen hat. Wenn sich etwas ändern
+soll, dann als eigene Änderung mit einem Test, der die betroffene Liste beschreibt.
+Stage 2 (Import) kann denselben Parser mitbenutzen – dafür liegt er in `src/lib/`
+und nicht neben der Seite.
 
 ## Design
 

@@ -1,11 +1,13 @@
 # Churntron
 
-Internes Vertriebs-Tool der TNG mit drei Modulen: **Churn-Leitfaden**,
-**Provisionen** und **Challenges**.
+Internes Vertriebs-Tool der TNG mit den Modulen **Kampagnen-Lookup**,
+**Churn-Leitfaden**, **Provisionen** und **Challenges**.
 
-Aktueller Stand: **Grundgerüst (Stage 1)** steht, und das **Provisionsmodul (Stage 4)**
-ist ausgebaut: selbst tracken per Tastendruck, Verdienst-Auswertung von der Stunde bis
-zum Jahr, Brutto-Netto-Rechner und der Abgleich mit der tatsächlichen Auszahlung.
+Aktueller Stand: **Grundgerüst (Stage 1)** steht, das **Provisionsmodul (Stage 4)**
+ist ausgebaut (selbst tracken per Tastendruck, Verdienst-Auswertung von der Stunde bis
+zum Jahr, Brutto-Netto-Rechner und der Abgleich mit der tatsächlichen Auszahlung), und
+das **Kampagnen-Lookup** ist aus der alten HTML-Datei hierher gezogen – mit internen
+Notizen und den beiden gewohnten Exporten.
 Import (Stage 2), Churn-Modul (Stage 3) und Challenges (Stage 5) folgen –
 siehe [PLAN.md](./PLAN.md).
 
@@ -65,6 +67,55 @@ npm run dev             # http://localhost:3000
 Passwort für beide: der Wert von `DEMO_PASSWORD` aus der `.env` (Standard: `churntron`).
 Als Admin sind zusätzlich die Team-Übersicht bei den Provisionen und der
 Verwaltungsbereich in der Navigation sichtbar.
+
+---
+
+## Das Kampagnen-Lookup
+
+Der Dialer für die Schicht – vorher eine einzelne HTML-Datei, jetzt unter
+**Kampagnen-Lookup** in Churntron. Der Ablauf ist derselbe geblieben:
+
+1. Zu Schichtbeginn die Excel-Liste ins Feld ziehen (mehrere gehen auch).
+2. Vor dem Anruf den Kunden nachschlagen – Suchfeld trifft Kundennummer, Name,
+   Rufnummer, Vertrag und jede durchgereichte Spalte.
+3. Auf die Nummer klicken: sie liegt im Wählformat in der Zwischenablage, in myApps
+   einfügen und grün drücken. Bei genau einem Treffer passiert das automatisch.
+4. Erreicht und erledigt? Häkchen setzen. Bei Welcome und Courtesy öffnet sich dafür
+   das gewohnte Formular (Home-ID, Beratungsprotokoll, Bewertung).
+5. Am Schichtende **Offene (xlsx)** an PP schicken, bei Welcome/Courtesy zusätzlich
+   **Reporting (CSV)**.
+
+### Neu: interne Notizen
+
+Zu jedem Kunden gibt es ein Notizfeld – aufklappen, tippen, fertig. Die acht häufigen
+Gesprächsausgänge („Nicht erreicht", „Rückruf vereinbart", …) sind Bausteine zum
+Antippen, damit während des Telefonats nichts getippt werden muss. Notizen sind über
+das normale Suchfeld wiederfindbar und bleiben im Browser gespeichert, auch über die
+nächste Liste hinweg (der Bezug läuft über die Vertrags- bzw. Kundennummer).
+
+**Die Notizen sind intern.** Sie stehen in keinem der beiden Exporte – die gehen
+unverändert so raus wie bisher.
+
+### Die beiden Exporte bleiben strukturgleich
+
+Auf der Gegenseite hängen eine Power-BI-Auswertung und ein eingespielter Ablauf.
+Deshalb liefern beide Ausgaben exakt das, was das alte Tool geliefert hat:
+
+| Export              | Zusage                                                                                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Reporting (CSV)** | Dieselben zwölf Spalten in derselben Reihenfolge, BOM, Semikolon, CRLF, Formel-Entschärfung, Dateiname `Welcome_Call_Reporting_JJJJMMTT.csv`.          |
+| **Offene (xlsx)**   | Vorspann, Kopfzeile, Spaltenbreiten, Blattname und Originalwerte unverändert; nur die erledigten Zeilen fehlen. Dateiname `<Originalname>_offen.xlsx`. |
+
+`src/lib/__tests__/lookup-export.test.ts` hält das fest. Eine zusätzliche Spalte
+wäre kein Fortschritt, sondern ein kaputter Import beim Empfänger.
+
+### Warum das trotzdem keine Klardaten in die Datenbank bringt
+
+Das Modul läuft **vollständig im Browser**: Die Liste wird lokal gelesen, lokal
+durchsucht und lokal wieder ausgegeben. Es gibt darin keinen `fetch`, keine Server
+Action und keinen Prisma-Aufruf; Markierungen, Formulare und Notizen liegen im
+`localStorage` des Geräts. `src/lib/__tests__/lookup-privacy.test.ts` prüft das gegen
+den Quelltext. Siehe auch [Datenschutz](#datenschutz).
 
 ---
 
@@ -147,12 +198,18 @@ Der Seed lief noch nicht durch: `npm run db:seed`.
 keine Adresse, keine Telefonnummer, keine E-Mail. Der Bezug läuft ausschließlich
 über die Vertrags- bzw. Kundennummer (`Contract.externalRef`).
 
-Die Klardaten bleiben im bestehenden Kampagnen-Lookup, das offline auf dem Rechner
-läuft. Dessen Reporting-CSV ist die vorgesehene Schnittstelle nach Churntron –
-sie enthält bereits keine Adresse und keine E-Mail; Name und Rufnummer werden beim
-Import verworfen.
+Das **Kampagnen-Lookup** ist die einzige Stelle, die Klardaten überhaupt sieht – und
+es sieht sie nur im Browser. Die Liste wird lokal gelesen, lokal durchsucht und lokal
+wieder ausgegeben; sie wird nicht hochgeladen und erreicht die Datenbank nie. Dass es
+dorthin keinen Weg gibt, ist keine Absichtserklärung, sondern geprüft: kein `fetch`,
+kein `'use server'`, kein Prisma-Import in `src/lib/lookup/` und
+`src/app/(dashboard)/dashboard/lookup/`.
 
-Ein Test (`npm test`) prüft das Prisma-Schema gegen diese Zusage.
+Die Reporting-CSV bleibt die vorgesehene Schnittstelle in die Datenbank – sie enthält
+keine Adresse und keine E-Mail; Name und Rufnummer werden beim Import verworfen.
+
+Zwei Tests (`npm test`) halten das fest: `schema-privacy.test.ts` prüft das
+Prisma-Schema gegen diese Zusage, `lookup-privacy.test.ts` den Quelltext des Lookups.
 
 > Einordnung: Vertrags- und Kundennummern sind _pseudonyme_ personenbezogene Daten,
 > keine anonymen. Der Ansatz senkt das Risiko deutlich, macht das Tool aber nicht

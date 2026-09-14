@@ -1,23 +1,32 @@
 # Churntron – Projektplan
 
-Internes Vertriebs-Tool der TNG. Drei Module: Churn-Leitfaden, Provisionen, Challenges.
+Internes Vertriebs-Tool der TNG. Module: Kampagnen-Lookup, Churn-Leitfaden,
+Provisionen, Challenges.
 
-**Stand: Stage 1 (Grundgerüst) und Stage 4 (Provisions-Tracker) sind fertig.**
-Stage 2, 3 und 5 stehen aus.
+**Stand: Stage 1 (Grundgerüst), Stage 4 (Provisions-Tracker) und das
+Kampagnen-Lookup sind fertig.** Stage 2, 3 und 5 stehen aus.
 
 ---
 
 ## 1. Wie die Teile zusammenspielen
 
-Das bestehende **Kampagnen-Lookup** (einzelne HTML-Datei, läuft offline auf dem Rechner)
-bleibt, wie es ist. Es sieht die echten Kundendaten, wird für den Anruf benutzt und
-exportiert am Schichtende eine Reporting-CSV. Churntron liest diese CSV – und sonst nichts.
+Das **Kampagnen-Lookup** ist seit September 2026 Teil von Churntron (vorher: einzelne
+HTML-Datei auf dem Rechner). Der Grund war ein praktischer: die Vertriebler wollten
+sich während des Gesprächs eigene Notizen machen können, und dafür war in der alten
+Datei kein Platz – sie kennt nur Haken und die Bewertung, und beides geht an PP.
+
+Am Datenfluss hat sich dadurch **nichts** geändert, und das ist der entscheidende Punkt:
 
 ```
-Excel-Liste (PP)  →  Lookup-Tool (lokal, Klardaten)  →  Reporting-CSV  →  Churntron (DB)
-                                                                              ↓
-                                                        Churn · Provisionen · Challenges
+Excel-Liste (PP)  →  Kampagnen-Lookup (im Browser, Klardaten)  →  Reporting-CSV  →  Churntron (DB)
+                              ↓                                                          ↓
+                     Restliste zurück an PP                       Churn · Provisionen · Challenges
 ```
+
+Das Lookup läuft weiterhin vollständig lokal – jetzt im Browser statt in einer Datei.
+Die Liste wird nicht hochgeladen, und zwischen Lookup und Datenbank liegt nach wie vor
+die Reporting-CSV. Was Churntron aus dem Lookup sieht, ist genau das, was es vorher
+auch gesehen hat: nichts, bis jemand die CSV importiert.
 
 Später ersetzt ein `DynamicsSource` den CSV-Weg, ohne dass UI oder Datenmodell sich ändern.
 
@@ -81,24 +90,54 @@ Next.js 16, TypeScript strict, Tailwind 4, Prisma 7 mit PostgreSQL, NextAuth mit
 Demo-Login, Sidebar-Layout, Dark Mode, alle vier Seiten mit echten Daten,
 durchgängiges Skeleton-Loading, ESLint/Prettier/Vitest.
 
+### Kampagnen-Lookup ✅ fertig
+
+Nicht ursprünglich geplant – das Tool sollte als HTML-Datei bleiben. Der Auslöser war
+der Wunsch nach eigenen Notizen während des Gesprächs, und der ließ sich in einer
+Datei ohne Speicher schlecht unterbringen.
+
+- **Übernommen wie es war.** Spaltenerkennung, Wählformat, Mehrfachnummern,
+  Jira-Verknüpfung, Erledigt/Prüfen-Haken, das Kampagnen-Formular und die
+  Ein-Treffer-Automatik bei der Suche.
+- **Neu: interne Notizen.** Freitext je Datensatz plus acht Bausteine zum Antippen,
+  über das Suchfeld wiederfindbar, im `localStorage` gespeichert. Der Bezug läuft über
+  `recKey()` (UUID → Vertrag → Kundennummer), also findet die Liste von morgen die
+  Notizen von heute wieder.
+- **Die beiden Exporte sind strukturgleich geblieben** – das war die Bedingung. Ein
+  Differenztest gegen die Originalfassung und ein Durchlauf im echten Browser
+  bestätigen das; `lookup-export.test.ts` hält es fest.
+- **Läuft vollständig im Browser.** Kein `fetch`, keine Server Action, kein Prisma –
+  `lookup-privacy.test.ts` prüft das gegen den Quelltext. Ohne diese Trennung wäre
+  aus dem Umzug ein Datenschutzvorfall geworden.
+- SheetJS 0.20.3 liegt unter `src/vendor/sheetjs/` (Begründung im dortigen README)
+  und wird erst beim ersten Dateizugriff nachgeladen.
+
+Offen geblieben: ein Export der Notizen für die eigene Nachbereitung. Bewusst nicht
+gebaut, weil er in keinen der beiden bestehenden Exporte gehört und niemand danach
+gefragt hat.
+
 ### Stage 2 – Datenimport
 
 `/import`: Upload von CSV/XLSX, Spaltenzuordnung mit Vorschau, Schreiben via Prisma.
 
-**Der Parser wird nicht neu geschrieben.** Das Lookup-Tool enthält ihn bereits – im
-`<script>`-Block nach der SheetJS-Bibliothek, frameworkfrei und über `module.exports`
-schon Node-testbar:
+**Der Parser ist schon da.** Beim Umzug des Lookups wurde er 1:1 nach
+`src/lib/lookup/parser.ts` portiert – getypt, aber im Verhalten unverändert
+(geprüft mit einem Differenztest gegen die Originalfassung, 503 Vergleiche):
 
 | Funktion                        | Was sie kann                                                                                                                |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `detectHeaderRow(aoa)`          | findet die Kopfzeile in den ersten 15 Zeilen, auch bei Vorspann                                                             |
 | `detectColumns(headers, rows)`  | Zuordnung über Synonym-Katalog **plus** Inhaltsprüfung, mit `STRICT`-Typen gegen Fehltreffer wie „Vertragsstatus" → Vertrag |
 | `buildRecords(aoa)`             | baut die Datensätze inklusive zusammengesetztem Namen und Adresse                                                           |
-| `neutralizeFormula` / `csvCell` | Schutz gegen CSV-Formel-Injection                                                                                           |
+| `neutralizeFormula` / `csvCell` | Schutz gegen CSV-Formel-Injection (in `src/lib/lookup/export.ts`)                                                           |
 
-Vorgehen: 1:1 nach `src/lib/import/parser.ts` portieren, Typen drübersetzen, Verhalten
-nicht ändern, Tests gegen eine echte Beispieldatei. Die Telefon-Logik
-(`normalizePhone`, `phonesFrom`) bleibt draußen – sie gehört zu den Klardaten.
+Der Import benutzt diesen Parser mit, statt einen zweiten zu bauen – deshalb liegt er
+in `src/lib/` und nicht neben der Lookup-Seite. Was der Import zusätzlich braucht, ist
+nur das Verwerfen der Klardaten-Spalten: `name`, `telRaw`, `dials`, `address` und
+`email` der `LookupRecord` gehen **nicht** in die Datenbank.
+
+Offen bleibt eine anonymisierte Beispiel-Excel (Punkt 1 unten), um die Zuordnung gegen
+eine echte Spaltenbelegung zu prüfen.
 
 Die Reporting-CSV des Lookup-Tools hat bereits die passenden Spalten:
 
