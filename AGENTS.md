@@ -1,9 +1,11 @@
 # Churntron – Projektkonventionen
 
-Internes Vertriebs-Tool der TNG. Module: Kampagnen-Lookup, Churn-Leitfaden,
-Provisionen, Challenges. Das Grundgerüst (Stage 1) steht, das Provisionsmodul (Stage 4)
-ist ausgebaut, das Kampagnen-Lookup ist aus der alten HTML-Datei übernommen.
-Import, Churn-Fachlogik und Challenges folgen (siehe `PLAN.md`).
+Internes Vertriebs-Tool der TNG. Sechs Module: Kampagnen-Lookup, Churn-Leitfaden,
+Einwand-Wiki, Provisionen, Challenges, Duelle. Das Grundgerüst (Stage 1) steht, das
+Provisionsmodul (Stage 4) ist ausgebaut, die Einwand-Wiki (Stage 6) läuft, Konten samt
+Profilen (Stage 7) stehen, die Duelle (Stage 8) sind da, das Kampagnen-Lookup ist aus
+der alten HTML-Datei übernommen, und aus Stage 3 läuft der Gesprächsleitfaden.
+Import, die übrige Churn-Fachlogik und die Challenges folgen (siehe `PLAN.md`).
 
 ## Die eine Regel, die nicht verhandelbar ist
 
@@ -14,6 +16,18 @@ Der Bezug zum Kunden läuft ausschließlich über `Contract.externalRef`
 
 `src/lib/__tests__/schema-privacy.test.ts` prüft das gegen `prisma/schema.prisma`.
 Wenn der Test rot wird, ist das kein Formfehler – dann wurde die Zusage gebrochen.
+
+Die Einwand-Wiki ist die einzige Stelle, an der jemand Freitext über einen Kunden
+eintippt. Dort greift zusätzlich `enthaeltKundendaten` in `src/lib/objection-input.ts`:
+Ziffernfolgen ab sechs Stellen und E-Mail-Adressen kommen nicht in die Datenbank. Wer
+dort ein Feld ergänzt, nimmt es in die Prüfschleife mit auf.
+
+**Von den eigenen Leuten steht auch nur das Nötige drin.** Seit es Profile gibt,
+prüft derselbe Test das Modell `User` mit: keine Privatanschrift, keine Rufnummer,
+kein Geburtsdatum, keine IBAN – und **kein Anmeldeverlauf**. Gespeichert wird der
+Zeitpunkt der letzten Anmeldung (`lastLoginAt`), damit Admins tote Konten finden,
+und sonst nichts. Provisionen und Leaderboard sind schon jetzt
+mitbestimmungspflichtige Leistungsdaten; eine Anwesenheitsliste kommt nicht dazu.
 
 ### Und das Kampagnen-Lookup?
 
@@ -36,21 +50,35 @@ und genau das ist der Fall, den die Regel oben verhindern soll.
 src/
   app/
     (dashboard)/        Route-Gruppe mit Auth-Guard, Sidebar und Topbar
-      dashboard/        Übersicht + die Module, je mit loading.tsx
-        lookup/         Kampagnen-Lookup – LÄUFT NUR IM BROWSER (siehe oben)
+      dashboard/        Übersicht + die sechs Module, je mit loading.tsx
+        lookup/           Kampagnen-Lookup – LÄUFT NUR IM BROWSER (siehe oben)
+        duels/            Duelle: 1 gegen 1 und 2 gegen 2
+        gespraech/        der Gesprächsleitfaden, breit
+        konto/            eigenes Profil, Anzeige, Passwort
+        verwaltung/       nur für ADMIN: Nutzerverwaltung
+    gespraech/          derselbe Leitfaden als eigenes Fenster, ohne Sidebar/Topbar
     login/              Anmeldung (Server Action)
     api/auth/           NextAuth-Handler
+    api/avatar/         liefert Profilbilder aus (nur angemeldet)
   components/
     ui/                 Primitive: Card, Button, Badge, Skeleton, Progress
     skeletons/          Ladezustände – je ein Baustein pro wiederkehrendem Block
-    layout/             Sidebar, Topbar, Theme-Umschalter
+    layout/             Sidebar, Topbar, Theme-Umschalter, Auto-Refresh
+    gespraech/          Leitfaden und die Schublade, die ihn im Dashboard trägt
+    avatar.tsx          Profilbild mit Initialen-Rückfall
   lib/
     db.ts               Prisma-Client (Driver-Adapter, Prisma 7)
     auth.ts             NextAuth mit Credentials-Provider
     auth.config.ts      edge-sicherer Teil für die Middleware
+    session.ts          angemeldeter Nutzer – frisch aus der DB, nicht aus dem JWT
+    actions.ts          ActionErgebnis, die Antwortform aller Server Actions
+    profil.ts           Regeln fürs eigene Konto (Namen, Passwort, Takt)
+    avatar.ts           was als Profilbild hereindarf – Prüfung ohne Datenbank
     queries/            ALLE Datenabfragen der Seiten
-      index.ts            Übersicht, Churn, Challenges – und re-exportiert:
+      index.ts            Konto, Verwaltung, Übersicht, Churn, Challenges – und:
       commissions.ts      das Provisionsmodul (eigene Datei wegen des Umfangs)
+      objections.ts       die Einwand-Wiki
+      duels.ts            die Duelle (eigene Datei wegen des Umfangs)
     lookup/             Kampagnen-Lookup, reine Logik – ohne DOM, ohne Datenbank
       parser.ts           Spaltenerkennung und Telefon-Aufbereitung (1:1 portiert)
       export.ts           Reporting-CSV und Restliste – strukturgleich zum alten Tool
@@ -59,10 +87,18 @@ src/
       xlsx.ts             Brücke zu SheetJS (nachgeladen, nur im Browser)
       types.ts
     commission-catalog.ts Provisionskatalog als Daten – Quelle für den Seed
+    objection-catalog.ts  Startbestand der Einwand-Wiki – Quelle für den Seed
+    objection-search.ts   die Suche der Wiki: Stammformen, Wortfelder, Tippfehler
+    objection-text.ts     Einstiegssatz und Punkte – wie ein Eintrag im Call gelesen wird
+    objection-input.ts    Prüfung der Wiki-Eingaben, inklusive Datenschutz-Sperre
     period.ts           Abrechnungsperioden 20. bis 20.
+    zeitraum.ts         Kalendermonat und Abrechnungszeitraum unter einer Schnittstelle
     time.ts             Tages-, Wochen- und Monatsgrenzen in Europe/Berlin
     earnings.ts         Verdienst-Auswertung (reine Rechnung, ohne Datenbank)
+    duels.ts            Duell-Auswertung (reine Rechnung, ohne Datenbank)
     brutto-netto.ts     Lohnsteuer, Soli, Sozialabgaben – reine Rechnung
+    leitfaden.ts        der Gesprächsleitfaden als Daten – Phasen, Einwände, Leitplanken
+    gespraech-speicher.ts  wo der Leitfaden steht und ob die Schublade offen ist
     labels.ts           deutsche Beschriftungen der Enum-Werte
     utils.ts            cn, formatEuro, formatDate, initials, Eingabe-Parser
     dev.ts              devDelay für die Skeleton-Demo
@@ -70,7 +106,7 @@ src/
     sheetjs/            mitgelieferte SheetJS-Build 0.20.3 – Herkunft im README
 ```
 
-Seiten importieren weiterhin aus `@/lib/queries` – die Aufteilung in zwei Dateien
+Seiten importieren weiterhin aus `@/lib/queries` – die Aufteilung in mehrere Dateien
 sieht man von außen nicht.
 
 ## Server und Client
@@ -119,6 +155,15 @@ Drei Dinge sind hier nicht verhandelbar:
 2. **Eine Periode läuft vom 20. bis zum 20.** Der Stichtag und der Auszahlungsverzug
    stehen als Konstante in `src/lib/period.ts` und sonst nirgends. `periodMonth` einer
    Buchung wird immer aus `occurredAt` über `periodeVon()` abgeleitet.
+
+   Der Kalendermonat bleibt daneben stehen. Dieselben Buchungen ergeben zwei
+   verschiedene Zahlen – „was habe ich im September gemacht" ist eine andere Frage
+   als „was steht auf der nächsten Abrechnung", und beide werden gestellt. Deshalb
+   zeigt jede Ansicht **beide Zuschnitte**, jeder mit seiner Spanne darunter, nie
+   eine allein und nie eine unbeschriftete Zahl namens „Monat". Beide laufen über
+   `src/lib/zeitraum.ts` (`art: 'monat' | 'periode'`); die Karte dafür ist
+   `components/zeitraum-vergleich.tsx`.
+
 3. **Tages- und Wochengrenzen laufen über `src/lib/time.ts`, nie über die Serverzeit.**
    Der Server läuft in UTC, gearbeitet wird in Deutschland. Eine Buchung um 00:30 Uhr
    würde sonst auf den Vortag rutschen – und „was habe ich heute verdient" ist genau
@@ -159,6 +204,120 @@ soll, dann als eigene Änderung mit einem Test, der die betroffene Liste beschre
 Stage 2 (Import) kann denselben Parser mitbenutzen – dafür liegt er in `src/lib/`
 und nicht neben der Seite.
 
+## Duelle
+
+Ein Duell ist 1 gegen 1 oder 2 gegen 2 zwischen Kolleginnen und Kollegen, um eine von
+sechs Kennzahlen in einem Zeitfenster. Zwei Dinge sind hier nicht verhandelbar:
+
+1. **Der Punktestand wird gerechnet, nicht gespeichert.** Es gibt keine Punktespalte
+   und keinen Zähler, der beim Buchen mitläuft. `src/lib/queries/duels.ts` lädt die
+   Rohzeilen (Provisionsbuchungen, Churn-Aktivitäten, Punkte), `src/lib/duels.ts`
+   rechnet daraus jeden Stand. Wird eine Buchung storniert, fällt sie auch aus dem
+   Duell heraus – gewonnen hat, wer wirklich geliefert hat.
+   Der Test in `src/lib/__tests__/schema-privacy.test.ts` hält das fest.
+2. **Ein Duell verlangt keine Zusatzerfassung.** Jede Metrik kommt aus Daten, die im
+   Alltag ohnehin entstehen. Wer ein Duell laufen hat, arbeitet einfach weiter. Eine
+   neue Metrik heißt deshalb: einen Enum-Wert in `DuelMetric`, einen Eintrag in
+   `METRIK_INFO` und einen Zweig in `punkteJeTeilnehmer` – sonst nichts.
+
+Die Zeitfenster laufen wie überall über `src/lib/time.ts` und `src/lib/period.ts`.
+Ein Tagesduell endet um Mitternacht deutscher Zeit, nicht um 02:00 Serverzeit.
+
+Ein noch nicht angenommenes Duell zeigt seinen Stand bereits an. Das ist Absicht: wer
+um 16 Uhr zum Tagesduell gebeten wird, soll vor dem Zusagen sehen, was die Gegenseite
+bis dahin gebucht hat.
+
+## Gesprächsleitfaden
+
+Der Leitfaden ist das Werkzeug für das laufende Telefonat. Drei Regeln:
+
+1. **Er bildet das Dokument 1:1 ab.** Gleiche Phasennummern, gleicher Wortlaut bei den
+   O-Ton-Sätzen. Wenn der Ausbilder „Phase 4" sagt, muss im Fenster Phase 4 stehen –
+   deshalb wird in `src/lib/leitfaden.ts` nicht umsortiert, gekürzt oder umformuliert.
+   `src/lib/__tests__/leitfaden.test.ts` hält die Nummerierung fest.
+2. **Was das Dokument nur als Verweis nennt, steht als sichtbare Lücke drin** – ein
+   Block der Art `luecke` mit dem Kennzeichen „folgt", nicht als stille Auslassung. Wer
+   das Fenster aufhat, soll auch sehen, was noch fehlt.
+3. **Das Werkzeug hilft, es erzeugt keine Arbeit.** Kein Protokoll, kein Pflichtfeld,
+   kein Datenbankschreiben – der Leitfaden liest nur aus einer Datei. Gemerkt wird die
+   Stelle, an der man steht, und die merkt er sich von selbst.
+
+Ein Bauteil, drei Hüllen: Seite, Schublade im Dashboard-Layout, eigenes Fenster unter
+`/gespraech`. Schmal und breit unterscheiden sich über **Container-Queries**
+(`@container`), nicht über Media-Queries – die Schublade ist schmal, obwohl der
+Bildschirm breit ist, da greifen Viewport-Breakpoints nicht.
+
+Browser-Zustand läuft über `src/lib/gespraech-speicher.ts` und `useSyncExternalStore`,
+nicht über `useState` plus `useEffect`: der Lint-Regelsatz `react-hooks/set-state-in-effect`
+verbietet den Umweg, und nebenbei bleiben zwei Ansichten im selben Dokument von selbst gleich.
+
+**Leitfaden und Einwand-Wiki teilen sich die Arbeit.** Phase 7 zeigt die fünf Einwände,
+die im Leitfaden stehen – im Wortlaut, wie alles andere dort. Die gepflegte Sammlung ist
+die Wiki, und der Leitfaden verweist dorthin, statt eine zweite Suche danebenzustellen.
+Während eines Telefonats darf es für einen Einwand nur eine Anlaufstelle geben.
+
+## Einwand-Wiki
+
+Drei Dinge tragen das Modul:
+
+1. **Die Suche läuft im Browser.** Gesucht wird während eines Telefonats – zwischen
+   Tastendruck und Treffer darf keine Netzrunde liegen. Der Bestand kommt einmal vom
+   Server, bewertet wird in `src/lib/objection-search.ts`, einer reinen Rechnung ohne
+   Datenbank. Ab ein paar hundert Einträgen wandert dieselbe Funktion in eine Server
+   Action oder in die Volltextsuche von Postgres; die Bewertung bleibt dieselbe.
+2. **Die Wortfelder sind Daten, kein Code.** Dass „zu teuer" auch die Einträge zu
+   Preiserhöhung und Rabatt findet, steht als Liste in `THEMEN`. Fehlt ein Wort, das im
+   Gespräch oft fällt, ist das eine Zeile – keine Fachlogik.
+3. **Ein Eintrag hat eine Form, und die kommt vom Autor.** Erste Zeile: der Satz, mit
+   dem es weitergeht. Danach ein Gedanke pro Zeile. Die Karte macht daraus drei
+   Schritte – _Jetzt sagen · Das zählt · Und dann fragen_ –, weil im Gespräch nicht
+   gelesen, sondern gesprochen wird. `zerlegeAntwort` in `src/lib/objection-text.ts`
+   erfindet dabei nichts: Wer einen Absatz eintippt, bekommt einen Absatz angezeigt.
+   Struktur, die niemand gemeint hat, wäre schlimmer als gar keine.
+4. **Der Startbestand gehört dem Team, sobald es ihn anfasst.** Der Provisionskatalog
+   ist eine Preisliste und wird bei jedem Seed überschrieben; die Wiki nicht. Der Seed
+   legt fehlende Einträge an (erkennbar am `key`) und frischt einen Starteintrag nur
+   auf, solange `edited` false ist. Die Server Action `einwandAendern` setzt das Flag –
+   ab dann bleibt die Fassung des Teams stehen, auch wenn der Katalog sich
+   weiterentwickelt. „Hat geholfen" und Archivieren zählen nicht als Anfassen. Selbst
+   angelegte Einträge haben keinen `key` und werden nie angerührt.
+
+Gelöscht wird nichts: `archived` blendet einen Eintrag aus der Suche aus, das Archiv
+holt ihn zurück. Und `helpful` ist kein Gefällt-mir, sondern die Sortierung bei gleich
+gutem Treffer.
+
+## Konten, Profile und die stille Aktualisierung
+
+Vier Dinge sind hier nicht verhandelbar:
+
+1. **Im Sitzungstoken steht nur die ID.** Alles Veränderliche – Name, Rolle, Team,
+   Profilbild – kommt bei jeder Anfrage frisch aus der Datenbank, über
+   `aktuellerNutzer()` in `src/lib/session.ts`. Ein JWT wird beim Anmelden
+   geschrieben und danach nie wieder angefasst: wer seinen Namen ändert, sähe ihn
+   sonst bis zum nächsten Anmelden nicht, und ein deaktiviertes Konto könnte
+   weiterarbeiten, bis das Token abläuft. `cache()` aus React fasst die Aufrufe
+   einer Anfrage zusammen, es bleibt also bei einer Abfrage.
+2. **Jede Server Action prüft selbst.** `angemeldeterNutzer()` für eigene Daten,
+   `angemeldeterAdmin()` für die Verwaltung – und beide fragen die Datenbank, nicht
+   das Token. Actions sind über einen direkten POST erreichbar, nicht nur über die
+   eigene Oberfläche.
+3. **Was als Profilbild hereinkommt, bestimmen die Magic Bytes.** Nicht der Typ, den
+   der Browser behauptet – unter genau diesem Typ liefern wir die Datei ja wieder
+   aus. SVG ist ausgeschlossen: es darf Skripte tragen. Zugeschnitten und
+   verkleinert wird im Browser (256×256, rund 30 KB), gespeichert wird in
+   `UserAvatar` als BYTEA. Kein zusätzlicher Speicherdienst – das wäre ein weiterer
+   Anbieter samt Auftragsverarbeitung für 30 Bilder.
+4. **Konten werden deaktiviert, nicht gelöscht.** An den Buchungen hängt die
+   Abrechnung. `User.active` steuert Anmeldung _und_ laufende Sitzungen.
+
+Die Oberfläche hält sich über `router.refresh()` selbst aktuell
+(`src/components/layout/auto-refresh.tsx`) – im Takt, den der Nutzer im Konto
+einstellt, „aus" eingeschlossen, und nur solange das Fenster im Vordergrund ist.
+Bewusst kein Push über SSE oder WebSockets: dafür bräuchte es einen Vermittler
+zwischen den Server-Instanzen, auf Vercel also einen weiteren Dienst. Solange die
+Hosting-Frage offen ist (`PLAN.md`, offener Punkt 8), ist Nachfragen im Takt die
+ehrlichere Antwort.
+
 ## Design
 
 TNG-Farbwelt: Navy `#00336E` trägt Navigation und Primäraktionen, Orange `#F18700`
@@ -191,7 +350,7 @@ Der Seed enthält **nur erfundene Daten**. Keine echten Listen ins Repo.
 npm run lint && npm test && npm run build
 ```
 
-Bei Änderungen an den Provisionsseiten zusätzlich die Sichtprüfung:
+Bei Änderungen an den Provisions- oder Duellseiten zusätzlich die Sichtprüfung:
 
 ```bash
 npm run dev:skeletons                          # in einem zweiten Terminal

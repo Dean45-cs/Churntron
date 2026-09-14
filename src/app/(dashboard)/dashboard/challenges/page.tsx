@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { Plus, Trophy } from 'lucide-react'
-import { auth } from '@/lib/auth'
+import { nutzerOderAnmeldung } from '@/lib/session'
 import { devDelay } from '@/lib/dev'
 import { formatDate, initials } from '@/lib/utils'
 import { CHALLENGE_METRIC_LABEL } from '@/lib/labels'
@@ -14,8 +14,8 @@ import { ChallengeGridSkeleton } from '@/components/skeletons/challenge-card-ske
 import { LeaderboardSkeleton } from '@/components/skeletons/leaderboard-skeleton'
 
 export default async function ChallengesPage() {
-  const session = await auth()
-  const isAdmin = session?.user.role === 'ADMIN'
+  const nutzer = await nutzerOderAnmeldung()
+  const isAdmin = nutzer.role === 'ADMIN'
 
   return (
     <>

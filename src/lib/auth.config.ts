@@ -24,25 +24,23 @@ export const authConfig = {
   callbacks: {
     authorized({ auth, request }) {
       const loggedIn = Boolean(auth?.user)
-      const onDashboard = request.nextUrl.pathname.startsWith('/dashboard')
-      if (onDashboard) return loggedIn
+      const { pathname } = request.nextUrl
+      // /gespraech ist das eigene Fenster des Leitfadens. Es liegt ausserhalb
+      // von /dashboard, weil es ohne Sidebar und Topbar laufen muss – der
+      // Schutz muss deshalb ausdruecklich mitgezogen werden.
+      const geschuetzt = pathname.startsWith('/dashboard') || pathname.startsWith('/gespraech')
+      if (geschuetzt) return loggedIn
       return true
     },
-    jwt({ token, user }) {
-      if (user) {
-        token.role = user.role
-        token.displayName = user.displayName
-        token.team = user.team
-      }
-      return token
-    },
+    /**
+     * Im Token steht allein die Nutzer-ID (`token.sub`, von NextAuth selbst
+     * gesetzt). Name, Rolle, Team und Profilbild sind veraenderlich; sie hier
+     * mitzuschreiben hiesse, sie bis zur naechsten Anmeldung einzufrieren.
+     * Sie kommen deshalb bei jeder Anfrage frisch aus der Datenbank –
+     * siehe src/lib/session.ts.
+     */
     session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.sub ?? ''
-        session.user.role = token.role
-        session.user.displayName = token.displayName
-        session.user.team = token.team
-      }
+      if (session.user) session.user.id = token.sub ?? ''
       return session
     },
   },

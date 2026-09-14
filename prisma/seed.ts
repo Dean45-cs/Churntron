@@ -12,6 +12,10 @@ import {
   CommissionCategory,
   CommissionStatus,
   ChallengeMetric,
+  DuelMetric,
+  DuelMode,
+  DuelStatus,
+  ObjectionCategory,
   SourceKind,
 } from '@prisma/client'
 import {
@@ -19,7 +23,10 @@ import {
   CATALOG_VALID_FROM,
   COMMISSION_CATALOG,
 } from '../src/lib/commission-catalog'
+import { OBJECTION_CATALOG } from '../src/lib/objection-catalog'
 import { periodeDavor, periodeVon, periodenZeitraum } from '../src/lib/period'
+import { vorlagenZeitraum } from '../src/lib/duels'
+import { plusTage, tagesBeginn, tagesEnde, wochenBeginn } from '../src/lib/time'
 
 const db = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -90,10 +97,62 @@ async function katalogSchreiben() {
   console.log(`Provisionskatalog: ${COMMISSION_CATALOG.length} Saetze geschrieben.`)
 }
 
+/**
+ * Startbestand der Einwand-Wiki.
+ *
+ * Anders als der Provisionskatalog ist das keine Preisliste, sondern ein
+ * Anfang – die Wiki gehoert nach dem ersten Tag dem Team. Deshalb die
+ * Zwischenstufe: Fehlende Eintraege werden angelegt, und ein Starteintrag wird
+ * nur solange aufgefrischt, wie ihn niemand angefasst hat (`edited = false`).
+ * Sobald jemand ihn ueber die Oberflaeche ueberarbeitet, bleibt seine Fassung
+ * stehen, auch wenn der Katalog sich weiterentwickelt. „Hat geholfen" und das
+ * Archivieren zaehlen dabei nicht als Anfassen.
+ */
+async function wikiSchreiben() {
+  const vorhanden = new Set(
+    (await db.objection.findMany({ where: { key: { not: null } }, select: { key: true } })).map(
+      (e) => e.key,
+    ),
+  )
+
+  let angelegt = 0
+  let aufgefrischt = 0
+  for (const eintrag of OBJECTION_CATALOG) {
+    const daten = {
+      title: eintrag.title,
+      category: eintrag.category as ObjectionCategory,
+      variants: [...eintrag.variants],
+      answer: eintrag.answer,
+      followUp: eintrag.followUp ?? null,
+      tags: [...eintrag.tags],
+    }
+
+    if (!vorhanden.has(eintrag.key)) {
+      await db.objection.create({ data: { key: eintrag.key, ...daten } })
+      angelegt++
+      continue
+    }
+
+    const { count } = await db.objection.updateMany({
+      where: { key: eintrag.key, edited: false },
+      data: daten,
+    })
+    aufgefrischt += count
+  }
+
+  console.log(
+    `Einwand-Wiki: ${angelegt} neu, ${aufgefrischt} aufgefrischt, ` +
+      `${vorhanden.size - aufgefrischt} vom Team uebernommen.`,
+  )
+}
+
 async function main() {
   // Der Katalog ist keine Demo-Beilage, sondern die Preisliste – er wird immer
-  // aktualisiert, auch wenn die Bremse gleich abbricht.
+  // aktualisiert, auch wenn die Bremse gleich abbricht. Der Startbestand der
+  // Wiki laeuft aus demselben Grund hier oben mit: sonst stuende sie auf einer
+  // bereits befuellten Datenbank leer da.
   await katalogSchreiben()
+  await wikiSchreiben()
 
   // Beim Deployen laeuft der Seed bei JEDEM Build mit. Ohne diese Bremse wuerde
   // jeder Redeploy die Datenbank leerraeumen. Mit SEED_ONLY_IF_EMPTY=1 fuellt er
@@ -110,6 +169,8 @@ async function main() {
   }
 
   console.log('Raeume alte Seed-Daten weg ...')
+  await db.duelParticipant.deleteMany()
+  await db.duel.deleteMany()
   await db.pointsEvent.deleteMany()
   await db.commission.deleteMany()
   await db.commissionPayout.deleteMany()
@@ -122,6 +183,9 @@ async function main() {
     where: { key: { notIn: COMMISSION_CATALOG.map((e) => e.key) } },
   })
   await db.challenge.deleteMany()
+  // Selbst angelegte Wiki-Eintraege sind Demo-Daten und fliegen raus. Der
+  // Startbestand (mit key) bleibt – er wurde eben erst sichergestellt.
+  await db.objection.deleteMany({ where: { key: null } })
   await db.userSettings.deleteMany()
   await db.user.deleteMany()
   await db.team.deleteMany()
@@ -135,16 +199,57 @@ async function main() {
   const people: {
     email: string
     displayName: string
+    jobTitle: string
     role: Role
     teamId: string
   }[] = [
-    { email: 'admin@tng.de', displayName: 'Sam Ausbilder', role: Role.ADMIN, teamId: teamNord.id },
-    { email: 'rep@tng.de', displayName: 'Kevin (Azubi)', role: Role.REP, teamId: teamNord.id },
-    { email: 'jo@tng.de', displayName: 'Jo Berger', role: Role.REP, teamId: teamNord.id },
-    { email: 'mika@tng.de', displayName: 'Mika Falk', role: Role.REP, teamId: teamSued.id },
-    { email: 'toni@tng.de', displayName: 'Toni Kraus', role: Role.REP, teamId: teamSued.id },
-    { email: 'ren@tng.de', displayName: 'Ren Ahrens', role: Role.REP, teamId: teamSued.id },
+    {
+      email: 'admin@tng.de',
+      displayName: 'Sam Ausbilder',
+      jobTitle: 'Teamleitung Vertrieb',
+      role: Role.ADMIN,
+      teamId: teamNord.id,
+    },
+    {
+      email: 'rep@tng.de',
+      displayName: 'Kevin (Azubi)',
+      jobTitle: 'Auszubildender KDM',
+      role: Role.REP,
+      teamId: teamNord.id,
+    },
+    {
+      email: 'jo@tng.de',
+      displayName: 'Jo Berger',
+      jobTitle: 'Vertrieb Innendienst',
+      role: Role.REP,
+      teamId: teamNord.id,
+    },
+    {
+      email: 'mika@tng.de',
+      displayName: 'Mika Falk',
+      jobTitle: 'Vertrieb Innendienst',
+      role: Role.REP,
+      teamId: teamSued.id,
+    },
+    {
+      email: 'toni@tng.de',
+      displayName: 'Toni Kraus',
+      jobTitle: 'Vertrieb Aussendienst',
+      role: Role.REP,
+      teamId: teamSued.id,
+    },
+    {
+      email: 'ren@tng.de',
+      displayName: 'Ren Ahrens',
+      jobTitle: 'Vertrieb Innendienst',
+      role: Role.REP,
+      teamId: teamSued.id,
+    },
   ]
+  // Kein Profilbild im Seed: das laedt jede und jeder selbst hoch, und
+  // erfundene Portraets waeren das eine Stueck Demo-Daten, das nach echten
+  // Menschen aussieht.
+
   const users = []
   for (const p of people) {
     users.push(await db.user.create({ data: { ...p, passwordHash: password } }))
@@ -484,6 +589,163 @@ async function main() {
     }
   }
 
+  // --- Duelle ------------------------------------------------------------
+  // Ein Querschnitt durch die Zustaende, den es fuer die Demo braucht: eine
+  // offene Einladung an den Demo-Login, zwei laufende Duelle (1 gegen 1 und
+  // 2 gegen 2) und zwei, die schon durch sind. Der Punktestand steht nirgends
+  // in der Datenbank – er faellt aus den Buchungen oben von selbst an.
+  const jo = users.find((u) => u.email === 'jo@tng.de')!
+  const mika = users.find((u) => u.email === 'mika@tng.de')!
+  const toni = users.find((u) => u.email === 'toni@tng.de')!
+  const ren = users.find((u) => u.email === 'ren@tng.de')!
+
+  const heute = vorlagenZeitraum('HEUTE', jetzt)
+  const dieseWoche = vorlagenZeitraum('WOCHE', jetzt)
+  const letzteWoche = {
+    von: plusTage(wochenBeginn(jetzt), -7),
+    bis: wochenBeginn(jetzt),
+  }
+  const gestern = {
+    von: tagesBeginn(plusTage(jetzt, -1)),
+    bis: tagesEnde(plusTage(jetzt, -1)),
+  }
+
+  const duellPlan: {
+    mode: DuelMode
+    metric: DuelMetric
+    status: DuelStatus
+    target?: number
+    stake?: string
+    von: Date
+    bis: Date
+    createdBy: string
+    seite1: string[]
+    seite2: string[]
+    /** Wer noch nicht zugesagt hat. */
+    offen?: string[]
+  }[] = [
+    {
+      mode: DuelMode.ONE_VS_ONE,
+      metric: DuelMetric.COMMISSION_CENTS,
+      status: DuelStatus.RUNNING,
+      stake: 'Kaffee für eine Woche',
+      ...heute,
+      createdBy: kevin.id,
+      seite1: [kevin.id],
+      seite2: [jo.id],
+    },
+    {
+      mode: DuelMode.TWO_VS_TWO,
+      metric: DuelMetric.BOOKINGS,
+      status: DuelStatus.RUNNING,
+      target: 60,
+      stake: 'Der Verlierer holt Brötchen',
+      ...dieseWoche,
+      createdBy: mika.id,
+      seite1: [mika.id, ren.id],
+      seite2: [kevin.id, toni.id],
+    },
+    {
+      mode: DuelMode.ONE_VS_ONE,
+      metric: DuelMetric.SALES,
+      status: DuelStatus.OPEN,
+      target: 5,
+      stake: 'Ehre',
+      ...dieseWoche,
+      createdBy: toni.id,
+      seite1: [toni.id],
+      seite2: [kevin.id],
+      offen: [kevin.id],
+    },
+    {
+      mode: DuelMode.ONE_VS_ONE,
+      metric: DuelMetric.COMMISSION_CENTS,
+      status: DuelStatus.FINISHED,
+      ...gestern,
+      createdBy: jo.id,
+      seite1: [jo.id],
+      seite2: [kevin.id],
+    },
+    {
+      mode: DuelMode.TWO_VS_TWO,
+      metric: DuelMetric.CALLS,
+      status: DuelStatus.FINISHED,
+      stake: 'Kuchen',
+      ...letzteWoche,
+      createdBy: kevin.id,
+      seite1: [kevin.id, jo.id],
+      seite2: [mika.id, toni.id],
+    },
+  ]
+
+  for (const d of duellPlan) {
+    const offen = new Set(d.offen ?? [])
+    await db.duel.create({
+      data: {
+        mode: d.mode,
+        metric: d.metric,
+        status: d.status,
+        target: d.target ?? null,
+        stake: d.stake ?? null,
+        startsAt: d.von,
+        endsAt: d.bis,
+        createdById: d.createdBy,
+        participants: {
+          create: [
+            ...d.seite1.map((userId) => ({ userId, side: 1, accepted: !offen.has(userId) })),
+            ...d.seite2.map((userId) => ({ userId, side: 2, accepted: !offen.has(userId) })),
+          ],
+        },
+      },
+    })
+  }
+
+  // --- Einwand-Wiki: Spuren aus dem Alltag -------------------------------
+  // Der Startbestand steht schon (siehe wikiSchreiben). Hier kommt nur dazu,
+  // was im Betrieb entsteht: Rueckmeldungen aus Gespraechen und zwei Eintraege,
+  // die jemand selbst geschrieben hat.
+  const wikiEintraege = await db.objection.findMany({ select: { id: true } })
+  for (const eintrag of wikiEintraege) {
+    await db.objection.update({
+      where: { id: eintrag.id },
+      // Die meisten Eintraege werden ein paar Mal gebraucht, einzelne oft –
+      // damit die Sortierung "bewaehrte zuerst" in der Demo etwas zeigt.
+      data: { helpful: rnd() > 0.75 ? intBetween(9, 24) : intBetween(0, 6) },
+    })
+  }
+
+  const kevinWiki = users.find((u) => u.email === 'rep@tng.de')!
+  await db.objection.createMany({
+    data: [
+      {
+        title: 'Ich habe gerade erst verlängert',
+        category: ObjectionCategory.CONTRACT,
+        variants: [
+          'ich bin noch bis nächstes Jahr gebunden',
+          'der Vertrag läuft doch noch',
+          'da komme ich jetzt nicht raus',
+        ],
+        answer:
+          'Genau deshalb rufe ich an – solange der Vertrag läuft, haben wir Zeit und müssen nichts überstürzen.\nIch merke Ihren Anschluss für den Ausbau vor.\nRechtzeitig vor Ihrer Kündigungsfrist melde ich mich wieder.\nDann liegt alles bereit, und Sie verpassen die Frist nicht.',
+        followUp: 'Wann genau läuft Ihr Vertrag aus – wissen Sie das Datum?',
+        tags: ['Laufzeit', 'Wiedervorlage', 'Frist'],
+        helpful: 11,
+        authorId: kevinWiki.id,
+      },
+      {
+        title: 'Am Hörer klingt der Kunde genervt, bevor ich etwas sagen kann',
+        category: ObjectionCategory.OTHER,
+        variants: ['sofort patzig', 'was wollen Sie schon wieder', 'nicht schon wieder ein Anruf'],
+        answer:
+          'Ich höre, das ist heute nicht der erste Anruf – ich mache es kurz.\nNicht dagegenreden, sondern den Ton aufnehmen: Tempo raus, Stimme runter.\nDanach eine Frage stellen, die nichts verkauft.\nWer antwortet, hört auf sich zu wehren.',
+        followUp: 'Sagen Sie mir kurz: Läuft Ihr Anschluss gerade so, wie er soll?',
+        tags: ['Gesprächseinstieg', 'Ton', 'Deeskalation'],
+        helpful: 7,
+        authorId: kevinWiki.id,
+      },
+    ],
+  })
+
   const counts = {
     teams: await db.team.count(),
     users: await db.user.count(),
@@ -494,6 +756,8 @@ async function main() {
     payouts: await db.commissionPayout.count(),
     challenges: await db.challenge.count(),
     pointsEvents: await db.pointsEvent.count(),
+    objections: await db.objection.count(),
+    duels: await db.duel.count(),
   }
   console.log(`Provisionsbuchungen im Tracker-Stil: ${gebucht}`)
   console.log('Seed fertig:', counts)

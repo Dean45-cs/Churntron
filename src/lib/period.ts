@@ -1,4 +1,12 @@
-import { ausTeilen, monatKurz, monatsName, teile } from '@/lib/time'
+import {
+  ausTeilen,
+  monatKurz,
+  monatsName,
+  monatsSchluesselAus,
+  monatsTeile,
+  spanneLabel,
+  teile,
+} from '@/lib/time'
 
 /**
  * Abrechnungsperioden der Provision.
@@ -24,21 +32,15 @@ export const AUSZAHLUNG_VERZUG_MONATE = 1
 export function periodeVon(d: Date) {
   const t = teile(d)
   const verschiebung = t.tag >= STICHTAG ? 1 : 0
-  return schluessel(t.jahr, t.monat + verschiebung)
+  return monatsSchluesselAus(t.jahr, t.monat + verschiebung)
 }
 
-function schluessel(jahr: number, monat: number) {
-  // Monat 13 ist Januar des Folgejahres.
-  const j = jahr + Math.floor((monat - 1) / 12)
-  const m = ((((monat - 1) % 12) + 12) % 12) + 1
-  return `${j}-${String(m).padStart(2, '0')}`
-}
-
-function zerlege(periode: string) {
-  const [jahr, monat] = periode.split('-').map(Number)
-  if (!jahr || !monat) throw new Error(`Ungueltiger Periodenschluessel: ${periode}`)
-  return { jahr, monat }
-}
+/**
+ * Periode und Kalendermonat tragen denselben Schluessel "2026-09" und dieselbe
+ * Arithmetik – nur der Zuschnitt unterscheidet sie. Deshalb kommen beide aus
+ * `time.ts`; hier bleibt allein, was den Stichtag betrifft.
+ */
+const zerlege = monatsTeile
 
 /** Zeitraum der Periode: von einschliesslich, bis ausschliesslich. */
 export function periodenZeitraum(periode: string) {
@@ -57,12 +59,12 @@ export function auszahlungsTag(periode: string) {
 
 export function periodeDavor(periode: string) {
   const { jahr, monat } = zerlege(periode)
-  return schluessel(jahr, monat - 1)
+  return monatsSchluesselAus(jahr, monat - 1)
 }
 
 export function periodeDanach(periode: string) {
   const { jahr, monat } = zerlege(periode)
-  return schluessel(jahr, monat + 1)
+  return monatsSchluesselAus(jahr, monat + 1)
 }
 
 /** Die letzten n Perioden, neueste zuerst – Grundlage der Abgleich-Liste. */
@@ -79,10 +81,7 @@ export function letztePerioden(bis: string, anzahl: number) {
 /** "20.08. – 19.09.2026" */
 export function periodenLabel(periode: string) {
   const { von, bis } = periodenZeitraum(periode)
-  const v = teile(von)
-  const letzterTag = teile(new Date(bis.getTime() - 86_400_000))
-  const zwei = (n: number) => String(n).padStart(2, '0')
-  return `${zwei(v.tag)}.${zwei(v.monat)}. – ${zwei(letzterTag.tag)}.${zwei(letzterTag.monat)}.${letzterTag.jahr}`
+  return spanneLabel(von, bis)
 }
 
 /** "September 2026" – der Name, unter dem die Periode im Team besprochen wird. */
@@ -101,15 +100,4 @@ export function periodenNameKurz(periode: string) {
  */
 export function periodeAbgeschlossen(periode: string, jetzt: Date) {
   return periodenZeitraum(periode).bis.getTime() <= jetzt.getTime()
-}
-
-/** Wie viele Tage der laufenden Periode sind vorbei, wie viele bleiben. */
-export function periodenFortschritt(periode: string, jetzt: Date) {
-  const { von, bis } = periodenZeitraum(periode)
-  const gesamt = bis.getTime() - von.getTime()
-  const vergangen = Math.min(Math.max(jetzt.getTime() - von.getTime(), 0), gesamt)
-  return {
-    prozent: Math.round((vergangen / gesamt) * 100),
-    restTage: Math.max(0, Math.ceil((bis.getTime() - jetzt.getTime()) / 86_400_000)),
-  }
 }

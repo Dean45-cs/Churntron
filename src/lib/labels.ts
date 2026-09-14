@@ -6,13 +6,23 @@ import type {
   ContractStatus,
   ActivityType,
   ActivityOutcome,
+  DuelMetric,
+  DuelMode,
+  ObjectionCategory,
+  Role,
 } from '@prisma/client'
+import type { DuellPhase } from '@/lib/duels'
 
 /**
  * Deutsche Beschriftungen der Enum-Werte an einer Stelle.
  * Der Kuendigungsgrund-Katalog ist noch ein Vorschlag – er wird mit dem
  * Ausbilder gegen die echten Listen abgeglichen (siehe PLAN.md).
  */
+export const ROLE_LABEL: Record<Role, string> = {
+  REP: 'Vertrieb',
+  ADMIN: 'Ausbilder / Teamleitung',
+}
+
 export const CANCEL_REASON_LABEL: Record<CancelReason, string> = {
   PRICE: 'Preis',
   SERVICE: 'Service',
@@ -71,10 +81,55 @@ export const ACTIVITY_TYPE_LABEL: Record<ActivityType, string> = {
   NOTE: 'Notiz',
 }
 
+/**
+ * Themen der Einwand-Wiki. Die Reihenfolge hier ist die Reihenfolge der
+ * Schnellfilter ueber der Suche – vorne, was am Telefon am haeufigsten kommt.
+ */
+export const OBJECTION_CATEGORY_LABEL: Record<ObjectionCategory, string> = {
+  PRICE: 'Preis',
+  COMPETITOR: 'Wettbewerb',
+  NEED: 'Bedarf',
+  TIMING: 'Zeitpunkt',
+  DECISION: 'Entscheidung',
+  CONTRACT: 'Vertrag',
+  TECHNICAL: 'Technik',
+  CONSTRUCTION: 'Bau',
+  SERVICE: 'Service',
+  TRUST: 'Vertrauen',
+  OTHER: 'Sonstiges',
+}
+
+/** Die Kategorien in der Reihenfolge, in der sie oben stehen sollen. */
+export const OBJECTION_CATEGORIES = Object.keys(OBJECTION_CATEGORY_LABEL) as ObjectionCategory[]
+
 export const ACTIVITY_OUTCOME_LABEL: Record<ActivityOutcome, string> = {
   REACHED: 'Erreicht',
   NOT_REACHED: 'Nicht erreicht',
   CALLBACK: 'Rückruf',
   WON: 'Gewonnen',
   LOST: 'Verloren',
+}
+
+export const DUEL_MODE_LABEL: Record<DuelMode, string> = {
+  ONE_VS_ONE: '1 gegen 1',
+  TWO_VS_TWO: '2 gegen 2',
+}
+
+/** Worum im Duell gespielt wird. Die Frage dazu steht in src/lib/duels.ts. */
+export const DUEL_METRIC_LABEL: Record<DuelMetric, string> = {
+  COMMISSION_CENTS: 'Provision',
+  BOOKINGS: 'Gebuchte Vorgänge',
+  SALES: 'Abschlüsse',
+  CHURN_SAVED: 'Rückgewinnungen',
+  CALLS: 'Gespräche',
+  POINTS: 'Punkte',
+}
+
+export const DUEL_PHASE_LABEL: Record<DuellPhase, string> = {
+  EINLADUNG: 'Einladung offen',
+  LAEUFT: 'läuft',
+  BEENDET: 'beendet',
+  ABGELEHNT: 'abgelehnt',
+  ABGESAGT: 'abgesagt',
+  VERFALLEN: 'verfallen',
 }

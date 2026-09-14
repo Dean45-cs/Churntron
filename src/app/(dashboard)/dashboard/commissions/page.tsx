@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { auth } from '@/lib/auth'
+import { nutzerOderAnmeldung } from '@/lib/session'
 import { devDelay } from '@/lib/dev'
 import { getKatalog, getTrackerStand } from '@/lib/queries'
 import { TrackerSkeleton } from '@/components/skeletons/tracker-skeleton'
@@ -10,8 +10,8 @@ import { Tracker } from './tracker'
  * Alles Weitere (Auswertung, Rechner, Abgleich) liegt hinter den Reitern.
  */
 export default async function CommissionsPage() {
-  const session = await auth()
-  const userId = session!.user.id
+  const nutzer = await nutzerOderAnmeldung()
+  const userId = nutzer.id
 
   return (
     <Suspense fallback={<TrackerSkeleton />}>

@@ -170,6 +170,13 @@ und keines davon ist technisch:
    und damit nach § 87 BetrVG mitbestimmungspflichtig. Der Betriebsrat muss gefragt
    werden, egal wo gehostet wird.
 
+   Dazu gehören seit den Profilen zwei weitere Punkte: Das **Profilbild** ist ein
+   personenbezogenes Datum. Es ist freiwillig, jederzeit im Konto löschbar und wird
+   nur an angemeldete Kolleginnen und Kollegen ausgeliefert – aber es gehört auf die
+   Liste. Und Churntron speichert bewusst **keinen Anmeldeverlauf**: nur den Zeitpunkt
+   der letzten Anmeldung, damit Admins tote Konten finden. Eine Anwesenheitsanzeige
+   („wer ist gerade online") wäre Verhaltenskontrolle und ist deshalb nicht gebaut.
+
 **Es besteht keine Bindung an Vercel.** Im Code steckt nichts Vercel-Spezifisches – das
 ist eine normale Next.js-Anwendung. Sagt die TNG-IT „kein US-Cloud", läuft dasselbe
 Repository ohne Codeänderung auf einem internen Server oder im Docker-Container
