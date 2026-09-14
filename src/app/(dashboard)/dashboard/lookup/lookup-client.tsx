@@ -9,7 +9,7 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react'
-import { Upload, Download, FileSpreadsheet, Search, RotateCcw } from 'lucide-react'
+import { Upload, Download, FileSpreadsheet, Search, RotateCcw, ArrowDownUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input, Select } from '@/components/ui/field'
 import { Badge } from '@/components/ui/badge'
@@ -18,6 +18,7 @@ import { findeDubletten, partnerBezeichnung } from '@/lib/lookup/dubletten'
 import { berechneFortschritt, formatiereAnwahl } from '@/lib/lookup/fortschritt'
 import { recKey } from '@/lib/lookup/parser'
 import { passt, suchText } from '@/lib/lookup/suche'
+import { berechneReihenfolge, plaetze } from '@/lib/lookup/reihenfolge'
 import { abonniereMinute, jetztMinute, serverMinute } from '@/lib/lookup/uhr'
 import {
   abonniereStand,
@@ -193,6 +194,17 @@ export function LookupClient() {
     [],
   )
 
+  /* ---------------- Reihenfolge ----------------
+     Die Reihenfolge friert bewusst ein. Wuerde sie bei jedem Haken neu
+     gerechnet, spraenge die Karte weg, waehrend man noch in ihre Notiz tippt.
+     Neu geordnet wird beim Laden einer Liste, beim Umschalten und auf
+     Knopfdruck – `sortBasis` ist genau dieser Schnappschuss. */
+  const [sortBasis, setSortBasis] = useState<{ stand: Schichtstand; jetzt: number } | null>(null)
+
+  const neuOrdnen = useCallback(() => {
+    setSortBasis({ stand: aktuellerStand(), jetzt: Date.now() })
+  }, [])
+
   /* ---------------- Dateien einlesen ---------------- */
 
   const nimmDateien = useCallback(
@@ -224,8 +236,10 @@ export function LookupClient() {
       // Eine bereits getroffene Auswahl wird nicht ueberschrieben.
       const erkannt = kampagneAusName(neueNamen[0] ?? '')
       if (erkannt !== 'none') setCamp((c) => (c === 'none' ? erkannt : c))
+      // Eine frisch geladene Liste bekommt sofort ihre Reihenfolge.
+      neuOrdnen()
     },
-    [zeigeMeldung],
+    [zeigeMeldung, neuOrdnen],
   )
 
   const zuruecksetzen = useCallback(() => {
@@ -235,6 +249,7 @@ export function LookupClient() {
     setSuche('')
     setOffenKeys(new Set())
     setFormKey(null)
+    setSortBasis(null)
     if (fileRef.current) fileRef.current.value = ''
   }, [])
 
@@ -245,6 +260,16 @@ export function LookupClient() {
   const hayBasis = useMemo(() => records.map((r) => suchText(r)), [records])
   const keys = useMemo(() => records.map((r) => recKey(r)), [records])
   const verzoegerteSuche = useDeferredValue(suche)
+
+  // Ueber ALLE Datensaetze, nicht nur die sichtbaren: der Zwilling einer Zeile
+  // steht gern hinter dem Schnitt bei 300 oder ausserhalb der Suche.
+  const dubletten = useMemo(() => findeDubletten(records), [records])
+
+  const platz = useMemo(() => {
+    if (stand.ordnung !== 'beste' || !sortBasis || !records.length) return null
+    const reihe = berechneReihenfolge(records, keys, sortBasis.stand, dubletten, sortBasis.jetzt)
+    return plaetze(reihe, records.length)
+  }, [records, keys, dubletten, sortBasis, stand.ordnung])
 
   // Gefiltert wird ueber INDIZES, nicht ueber Datensaetze: die Dubletten-Map
   // ist nach Index adressiert, und so bleibt der Bezug ohne eine zweite
@@ -260,8 +285,10 @@ export function LookupClient() {
       if (!passt(hay, q)) continue
       out.push(i)
     }
+    // Erst filtern, dann ordnen: die Reihenfolge gilt fuer das, was uebrig ist.
+    if (platz) out.sort((a, b) => platz[a]! - platz[b]!)
     return out
-  }, [records, keys, hayBasis, verzoegerteSuche, hideDone, stand.statusMap, stand.notizMap])
+  }, [records, keys, hayBasis, verzoegerteSuche, hideDone, stand.statusMap, stand.notizMap, platz])
 
   const abgeschnitten = !verzoegerteSuche.trim() && gefiltert.length > CAP
   const sichtbar = abgeschnitten ? gefiltert.slice(0, CAP) : gefiltert
@@ -285,9 +312,17 @@ export function LookupClient() {
 
   const fortschritt = useMemo(() => berechneFortschritt(keys, stand, jetzt), [keys, stand, jetzt])
 
-  // Ueber ALLE Datensaetze, nicht nur die sichtbaren: der Zwilling einer Zeile
-  // steht gern hinter dem Schnitt bei 300 oder ausserhalb der Suche.
-  const dubletten = useMemo(() => findeDubletten(records), [records])
+  // Wie viele Eintraege seit dem letzten Ordnen angefasst wurden – so viele
+  // stehen jetzt an einer Stelle, die nicht mehr stimmt.
+  const seitOrdnenBearbeitet = useMemo(() => {
+    if (!platz || !sortBasis) return 0
+    let n = 0
+    for (const key of keys) {
+      const ts = stand.kontaktMap[key]
+      if (ts != null && ts > sortBasis.jetzt) n++
+    }
+    return n
+  }, [platz, sortBasis, keys, stand.kontaktMap])
 
   /* ---------------- Exporte ---------------- */
 
@@ -440,6 +475,23 @@ export function LookupClient() {
               <option value="courtesy">Courtesy Call</option>
             </Select>
           </label>
+          <label className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Reihenfolge</span>
+            <Select
+              value={stand.ordnung}
+              onChange={(e) => {
+                const neu = e.target.value === 'datei' ? 'datei' : 'beste'
+                aendereStand((alt) => ({ ...alt, ordnung: neu }))
+                neuOrdnen()
+              }}
+              className="h-9 w-auto text-sm"
+              aria-label="Reihenfolge"
+              title="Beste zuerst: Rückrufe, dann was zu prüfen ist, dann der zweite Versuch nach 90 Minuten, dann die unberührten. Dubletten stehen beieinander."
+            >
+              <option value="beste">Beste zuerst</option>
+              <option value="datei">Wie in der Datei</option>
+            </Select>
+          </label>
           <label className="text-muted-foreground flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -482,6 +534,20 @@ export function LookupClient() {
           <b className="text-foreground tabular">{gefiltert.length.toLocaleString('de-DE')}</b>{' '}
           Treffer
           {abgeschnitten ? ` (erste ${CAP})` : ''}
+          {seitOrdnenBearbeitet > 0 ? (
+            <>
+              {' · '}
+              <button
+                type="button"
+                onClick={neuOrdnen}
+                className="text-primary hover:underline"
+                title="Die Reihenfolge steht seit dem Laden fest, damit beim Abhaken nichts wegspringt."
+              >
+                <ArrowDownUp className="mr-1 inline size-3 align-[-1px]" />
+                {seitOrdnenBearbeitet} bearbeitet – neu ordnen
+              </button>
+            </>
+          ) : null}
           {fortschritt.erledigt + fortschritt.zuPruefen > 0 ? (
             <>
               {' · '}

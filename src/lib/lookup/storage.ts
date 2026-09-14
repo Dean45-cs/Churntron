@@ -12,7 +12,7 @@
  * Liste am naechsten Tag findet die Markierungen von gestern wieder.
  */
 
-import type { FormularStand, StatusWert } from './types'
+import { istOrdnung, type FormularStand, type Ordnung, type StatusWert } from './types'
 
 /**
  * Dieselben Schluessel wie im alten Kampagnen-Lookup. Die Daten wandern zwar
@@ -26,6 +26,8 @@ const KEY_TS = 'tng_lookup_ts_v1'
 const KEY_NOTIZEN = 'tng_lookup_notes_v1'
 /** Und der Zeitpunkt, an dem der Kunde angewaehlt wurde. */
 const KEY_KONTAKT = 'tng_lookup_kontakt_v1'
+/** Wie die Liste sortiert wird. */
+const KEY_ORDNUNG = 'tng_lookup_ordnung_v1'
 
 export type Schichtstand = {
   statusMap: Record<string, StatusWert>
@@ -45,10 +47,26 @@ export type Schichtstand = {
    * die Zeitangabe auf der Karte und den Fortschritt. Rein intern.
    */
   kontaktMap: Record<string, number>
+  /**
+   * In welcher Reihenfolge die Liste steht. Streng genommen keine Angabe zu
+   * einem Datensatz, sondern eine Einstellung – sie faehrt hier trotzdem mit,
+   * weil ein eigener Speicher fuer ein einzelnes Wort Aufwand ohne Gegenwert
+   * waere. Sie wird wie alles andere im Browser gemerkt.
+   */
+  ordnung: Ordnung
 }
 
 export function leererStand(): Schichtstand {
-  return { statusMap: {}, formMap: {}, tsMap: {}, notizMap: {}, kontaktMap: {} }
+  return {
+    statusMap: {},
+    formMap: {},
+    tsMap: {},
+    notizMap: {},
+    kontaktMap: {},
+    // Die beste Reihenfolge ist der Sinn der Sache – wer die Datei-Reihenfolge
+    // will, schaltet einmal um, und das bleibt dann gemerkt.
+    ordnung: 'beste',
+  }
 }
 
 function lies<T>(key: string): Record<string, T> {
@@ -76,6 +94,17 @@ function schreib(key: string, wert: unknown) {
   }
 }
 
+/** Ein einzelnes Wort statt einer Zuordnung – mit derselben Nachsicht. */
+function liesOrdnung(): Ordnung {
+  if (typeof window === 'undefined') return 'beste'
+  try {
+    const roh = window.localStorage.getItem(KEY_ORDNUNG)
+    return istOrdnung(roh) ? roh : 'beste'
+  } catch {
+    return 'beste'
+  }
+}
+
 export function ladeStand(): Schichtstand {
   return {
     statusMap: lies<StatusWert>(KEY_STATUS),
@@ -83,6 +112,7 @@ export function ladeStand(): Schichtstand {
     tsMap: lies<number>(KEY_TS),
     notizMap: lies<string>(KEY_NOTIZEN),
     kontaktMap: lies<number>(KEY_KONTAKT),
+    ordnung: liesOrdnung(),
   }
 }
 
@@ -92,6 +122,15 @@ export function speichereStand(stand: Schichtstand) {
   schreib(KEY_TS, stand.tsMap)
   schreib(KEY_NOTIZEN, stand.notizMap)
   schreib(KEY_KONTAKT, stand.kontaktMap)
+  // Ohne JSON-Huelle: es ist ein Wort, und so laesst es sich im
+  // Browser-Speicher auch von Hand lesen.
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(KEY_ORDNUNG, stand.ordnung)
+    } catch {
+      /* siehe oben */
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------------

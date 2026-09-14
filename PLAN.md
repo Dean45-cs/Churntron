@@ -128,6 +128,11 @@ Datei ohne Speicher schlecht unterbringen.
   die Auswertung aber offen. Aus dem Zeitstempel gerechnet, der ohnehin mitläuft.
 - **Anwahl-Zeitstempel.** Jede angefasste Karte zeigt, wann zuletzt gewählt wurde.
   Eigener Merker (`kontaktMap`), damit die CSV-Spalte `Bearbeitet_am` unberührt bleibt.
+- **Die Liste ordnet sich selbst.** Umschalter „Beste zuerst / Wie in der Datei":
+  Rückrufe, dann zu Prüfendes, dann der zweite Versuch nach 90 Minuten, dann die
+  unberührten; Dubletten stehen beieinander. Die Reihenfolge friert beim Laden ein und
+  ordnet sich auf Knopfdruck neu, damit beim Abhaken nichts wegspringt. Reine
+  Ansichtssache – die Exporte bleiben in Dateireihenfolge.
 - **Dubletten.** Einträge mit gleicher Rufnummer, Kundennummer oder Vertragsnummer
   werden übergreifend zusammengefasst (Union-Find) und auf der Karte markiert, bevor
   gewählt wird. Bewusst nur markiert: zwei Verträge desselben Kunden können zwei

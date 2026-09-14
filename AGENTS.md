@@ -86,6 +86,7 @@ src/
       suche.ts            Suchtext je Datensatz
       fortschritt.ts      Stand der Schicht, Tempo und Restdauer-Schätzung
       dubletten.ts        Einträge, hinter denen ein Anruf steckt (Union-Find)
+      reihenfolge.ts      wen man als Nächstes anruft – Einstufung und Sortierung
       uhr.ts              die laufende Minute als externer Speicher
       xlsx.ts             Brücke zu SheetJS (nachgeladen, nur im Browser)
       types.ts
@@ -217,6 +218,14 @@ Zwei Dinge, die dazugekommen sind und beide nichts am Export ändern:
   wird nur von Status und Formular fortgeschrieben. `kontaktMap` merkt sich jede
   Berührung inklusive Notiz und trägt die Anzeige auf der Karte sowie den Fortschritt.
   Wer beide zusammenlegt, verschiebt einen Wert, den der Chef zu sehen bekommt.
+- **Die Reihenfolge friert ein.** Sie wird beim Laden gerechnet und bleibt stehen, bis
+  jemand „neu ordnen" drückt. Live zu sortieren hiesse, die Karte springt weg, während
+  man noch in ihre Notiz tippt. Der Schnappschuss dafür ist `sortBasis` im Client.
+  Und sie ist reine Ansichtssache: beide Exporte laufen über `records` und `_aoaIdx`
+  und stehen weiter in der Reihenfolge der Datei.
+- **Eingeordnet wird über die Bausteine, nicht über den Freitext.** `ordneEin` prüft mit
+  `bausteinAktiv`, nicht mit `includes` – „nicht zufrieden" enthält „Zufrieden", und
+  eine Einordnung, die man nicht vorhersagen kann, ist schlimmer als gar keine.
 - **Dubletten werden markiert, nicht abgehakt.** Zwei Verträge desselben Kunden können
   zwei Reportings brauchen; automatisch mitzumarkieren würde still die Auswertung
   verändern. Die wichtigste Regel in `findeDubletten`: leere Felder sind kein Merkmal –

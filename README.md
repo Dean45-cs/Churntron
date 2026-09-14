@@ -133,6 +133,48 @@ später getippte Notiz darf den Wert, den er zu sehen bekommt, nicht verschieben
 Beide liegen getrennt im Browser-Speicher (`tng_lookup_ts_v1` und
 `tng_lookup_kontakt_v1`).
 
+### Neu: Die Liste ordnet sich selbst
+
+Die Datei kommt in der Reihenfolge von PP, und die sagt nichts darüber, wen man als
+Nächstes anrufen sollte. Der Umschalter **Reihenfolge** über der Liste stellt zwischen
+„Beste zuerst" und „Wie in der Datei" um; die Wahl bleibt gemerkt.
+
+„Beste zuerst" sortiert nach Dringlichkeit:
+
+| Ganz oben            |                                                                  |
+| -------------------- | ---------------------------------------------------------------- |
+| **Rückruf zugesagt** | „Rückruf vereinbart" oder „Wiedervorlage" – ein Versprechen      |
+| **Zu prüfen**        | der Haken, den jemand bewusst gesetzt hat                        |
+| **Zweiter Versuch**  | „Nicht erreicht"/„Mailbox", 90 Minuten her – jetzt lohnt es      |
+| **Offen**            | der Normalfall: noch nie angefasst                               |
+| **Gerade versucht**  | vor 10 Minuten niemanden erreicht – gleich nochmal bringt nichts |
+| **Gesprochen**       | da war jemand dran                                               |
+| **Keine Nummer**     | lässt sich nicht wählen, bleibt aber offen                       |
+| **Kein Interesse**   | ein Nein ist ein Nein                                            |
+| **Erledigt**         | durch                                                            |
+
+**Dubletten stehen beieinander**, statt über die Liste verteilt – die Gruppe rutscht
+dorthin, wo ihr dringendstes Mitglied stünde. So wählt man einmal statt zweimal.
+
+Die Wartezeit von 90 Minuten ist eine Zahl, kein Naturgesetz: sie steht als
+`WARTEZEIT_MINUTEN` in `src/lib/lookup/reihenfolge.ts`. Wenn sich im Alltag zeigt, dass
+zwei Stunden besser passen, ist es diese eine Zeile.
+
+Eingeordnet wird über die **Notiz-Bausteine**, nicht über den Freitext. Wer „nicht
+erreicht" selbst tippt, statt den Baustein anzutippen, landet unter „Gesprochen" – aus
+Freitext zu raten wäre die schlechtere Wette („nicht zufrieden" enthält „Zufrieden").
+
+#### Die Reihenfolge friert ein
+
+Sie wird beim Laden der Liste gerechnet und bleibt dann stehen. Würde sie bei jedem
+Haken neu sortieren, spränge die Karte weg, während man noch in ihre Notiz tippt.
+Sobald sich etwas geändert hat, steht über der Liste **„3 bearbeitet – neu ordnen"** –
+ein Klick, und es passt wieder.
+
+**Die Exporte sind davon nicht betroffen.** Reporting-CSV und Restliste laufen über die
+Originalzeilen und stehen weiter in der Reihenfolge der Datei, egal was die Anzeige
+gerade macht.
+
 ### Neu: Dubletten
 
 Steht derselbe Anschluss mehrfach in der Liste, tragen die betroffenen Karten ein

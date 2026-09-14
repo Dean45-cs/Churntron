@@ -88,3 +88,15 @@ export type FormularStand = {
   protokoll?: boolean
   bewertung?: number
 }
+
+/**
+ * In welcher Reihenfolge die Liste steht: nach Dringlichkeit oder so, wie PP
+ * sie geschickt hat. Steht hier und nicht in `reihenfolge.ts`, damit
+ * `storage.ts` die Einstellung lesen kann, ohne dass sich beide Module
+ * gegenseitig importieren.
+ */
+export type Ordnung = 'beste' | 'datei'
+
+export function istOrdnung(w: unknown): w is Ordnung {
+  return w === 'beste' || w === 'datei'
+}
