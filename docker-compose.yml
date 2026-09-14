@@ -1,0 +1,28 @@
+# Lokale Entwicklungs-Datenbank.
+#
+#   npm run db:up      startet sie
+#   npm run db:down    haelt sie an (Daten bleiben erhalten)
+#
+# Zugangsdaten passen zur DATABASE_URL aus .env.example – wer Docker nutzt,
+# muss an der .env nichts aendern.
+services:
+  db:
+    image: postgres:16
+    container_name: churntron-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: churntron
+      POSTGRES_PASSWORD: churntron
+      POSTGRES_DB: churntron
+    ports:
+      - '5432:5432'
+    volumes:
+      - churntron-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U churntron -d churntron']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  churntron-db-data:

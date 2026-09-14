@@ -1,0 +1,173 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* ===========================================================================
+   TNG Design-Tokens
+   Quelle: TNG-Designsystem (Navy #00336E, Orange #F18700, Archivo + IBM Plex Mono).
+   Navy traegt Navigation und Primaeraktionen, Orange ist ausschliesslich fuer
+   Highlights und CTAs reserviert – nie flaechig.
+   =========================================================================== */
+
+:root {
+  /* Markenfarben, unveraendert in beiden Themes */
+  --tng-navy: #00336e;
+  --tng-navy-700: #002a5c;
+  --tng-navy-100: #dce7f2;
+  --tng-navy-50: #eef3f9;
+  --tng-orange: #f18700;
+  --tng-orange-600: #d97800;
+  --tng-orange-50: #fef3e3;
+
+  /* Rollen – helles Theme */
+  --background: #f7f9fc;
+  --foreground: #1a2230;
+  --card: #ffffff;
+  --card-foreground: #1a2230;
+  --popover: #ffffff;
+  --popover-foreground: #1a2230;
+  --primary: var(--tng-navy);
+  --primary-foreground: #ffffff;
+  --secondary: var(--tng-navy-50);
+  --secondary-foreground: var(--tng-navy);
+  --muted: #eef1f6;
+  --muted-foreground: #5b6675;
+  --accent: var(--tng-orange);
+  --accent-foreground: #ffffff;
+  --accent-subtle: var(--tng-orange-50);
+  --destructive: #b5451b;
+  --destructive-foreground: #ffffff;
+  --success: #1f7a4d;
+  --success-subtle: #e7f4ed;
+  --border: #d9dee7;
+  --input: #d9dee7;
+  --ring: var(--tng-navy);
+
+  --skeleton-base: #e4eaf2;
+  --skeleton-sheen: #f2f6fb;
+  --shadow-soft: 0 6px 30px rgba(0, 51, 110, 0.1);
+  --shadow-raised: 0 2px 6px rgba(0, 51, 110, 0.06);
+
+  --radius: 1rem;
+}
+
+.dark {
+  /* Navy-getoentes Dunkel statt neutralem Schwarz – haelt die Markenanmutung. */
+  --background: #0b1420;
+  --foreground: #e8edf5;
+  --card: #111d2e;
+  --card-foreground: #e8edf5;
+  --popover: #111d2e;
+  --popover-foreground: #e8edf5;
+  /* Reines Navy hat auf Dunkel zu wenig Kontrast – aufgehellte Variante. */
+  --primary: #6ba4de;
+  --primary-foreground: #06111c;
+  --secondary: #16263a;
+  --secondary-foreground: #cfe0f2;
+  --muted: #16263a;
+  --muted-foreground: #93a1b5;
+  --accent: #ff9e2e;
+  --accent-foreground: #26160a;
+  --accent-subtle: #2a1d0d;
+  --destructive: #e2714a;
+  --destructive-foreground: #21100a;
+  --success: #4cc08a;
+  --success-subtle: #10261c;
+  --border: #1f2e42;
+  --input: #24354c;
+  --ring: #6ba4de;
+
+  --skeleton-base: #18283c;
+  --skeleton-sheen: #22364e;
+  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.35);
+  --shadow-raised: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-archivo), system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --radius-sm: calc(var(--radius) - 0.5rem);
+  --radius-md: calc(var(--radius) - 0.25rem);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.25rem);
+
+  --shadow-soft: var(--shadow-soft);
+  --shadow-raised: var(--shadow-raised);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'ss01', 'cv01';
+  }
+  /* Zahlen in Tabellen und Kennzahlen laufen nicht auseinander. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Skeleton-Shimmer in TNG-Navy statt Standard-Grau.
+   Bei prefers-reduced-motion bleibt die Flaeche ruhig stehen.
+   --------------------------------------------------------------------------- */
+@keyframes tng-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  background-image: linear-gradient(
+    90deg,
+    var(--skeleton-base) 0%,
+    var(--skeleton-sheen) 50%,
+    var(--skeleton-base) 100%
+  );
+  background-size: 200% 100%;
+  animation: tng-shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background-image: none;
+    background-color: var(--skeleton-base);
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -1,0 +1,7 @@
+.next
+node_modules
+prisma/migrations
+package-lock.json
+
+# Fremdcode – bleibt Byte fuer Byte, wie er ausgeliefert wurde
+src/vendor
