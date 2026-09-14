@@ -100,6 +100,31 @@ nächste Liste hinweg (der Bezug läuft über die Vertrags- bzw. Kundennummer).
 **Die Notizen sind intern.** Sie stehen in keinem der beiden Exporte – die gehen
 unverändert so raus wie bisher.
 
+### Neu: Stand der Schicht
+
+Über der Liste steht, wie weit die Schicht ist: **„47 von 120 geschafft"** mit Balken,
+daneben wie viele noch zu prüfen und wie viele noch unberührt sind. Dazu das Tempo –
+**wie viele in der letzten Stunde** – und, sobald genug vorliegt, wie lange der Rest bei
+diesem Tempo noch dauert.
+
+Die Hochrechnung ist eine Schätzung und wird gar nicht erst angezeigt, solange weniger
+als drei Vorgänge oder weniger als zehn Minuten Schicht vorliegen: aus drei Anrufen in
+fünf Minuten ließe sich alles Mögliche hochrechnen, nur nichts Verlässliches. Gerechnet
+wird aus dem Zeitstempel, der ohnehin schon je Datensatz mitläuft – es kommt keine
+zusätzliche Erfassung dazu. Der Tag beginnt dabei um Mitternacht **deutscher** Zeit.
+
+### Neu: Dubletten
+
+Steht derselbe Anschluss mehrfach in der Liste, tragen die betroffenen Karten ein
+orangefarbenes **„2×"** – sichtbar, bevor gewählt wird. Zusammengefasst wird über
+Rufnummer, Kundennummer und Vertragsnummer, und zwar übergreifend: teilt A mit B die
+Nummer und B mit C die Kundennummer, gehören alle drei zusammen. Aufgeklappt steht da,
+warum („Gleiche Rufnummer und gleicher Kunde – ein weiterer Eintrag in der Liste") und
+die anderen Einträge sind antippbar, um direkt hinzuspringen.
+
+**Abgehakt wird nichts von allein.** Zwei Verträge desselben Kunden können sehr wohl
+zwei Reportings brauchen – die Entscheidung bleibt beim Vertriebler.
+
 ### Die beiden Exporte bleiben strukturgleich
 
 Auf der Gegenseite hängen eine Power-BI-Auswertung und ein eingespielter Ablauf.

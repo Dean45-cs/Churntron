@@ -1,9 +1,14 @@
 'use client'
 
-import { ChevronRight, Check, Flag, Mail, ExternalLink, Copy } from 'lucide-react'
+import { ChevronRight, Check, Flag, Mail, ExternalLink, Copy, CopyCheck } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { dublettenText, type Dublette } from '@/lib/lookup/dubletten'
 import type { LookupRecord, StatusWert } from '@/lib/lookup/types'
 import { cn } from '@/lib/utils'
 import { NotizFeld } from './notiz-feld'
+
+/** Ein Partner-Eintrag derselben Dubletten-Gruppe, fertig beschriftet. */
+export type DublettenPartner = { bezeichnung: string; suche: string }
 
 /**
  * Eine Karte je Datensatz. Zugeklappt steht dort, was fuer den Anruf reicht:
@@ -59,19 +64,27 @@ export function LookupKarte({
   status,
   notiz,
   offen,
+  dublette,
+  partner,
   onToggleOffen,
   onStatus,
   onNotiz,
   onCopy,
+  onSpringeZu,
 }: {
   record: LookupRecord
   status: StatusWert
   notiz: string
   offen: boolean
+  /** Gesetzt, wenn derselbe Anschluss mehrfach in der Liste steht. */
+  dublette?: Dublette
+  /** Die uebrigen Eintraege der Gruppe, beschriftet und anspringbar. */
+  partner?: DublettenPartner[]
   onToggleOffen: () => void
   onStatus: (st: Exclude<StatusWert, ''>) => void
   onNotiz: (wert: string) => void
   onCopy: (wert: string) => void
+  onSpringeZu: (suche: string) => void
 }) {
   const r = record
   const dials = r.dials.length ? r.dials : r.dial ? [r.dial] : []
@@ -123,13 +136,23 @@ export function LookupKarte({
           aria-expanded={offen}
           className="order-3 w-full min-w-0 text-left sm:order-2 sm:w-auto sm:flex-1"
         >
-          <span
-            className={cn(
-              'block truncate text-sm font-semibold',
-              status === 'done' && 'text-muted-foreground line-through',
-            )}
-          >
-            {r.name || '—'}
+          <span className="flex items-center gap-2">
+            <span
+              className={cn(
+                'truncate text-sm font-semibold',
+                status === 'done' && 'text-muted-foreground line-through',
+              )}
+            >
+              {r.name || '—'}
+            </span>
+            {dublette ? (
+              // Vor dem Waehlen sichtbar, nicht erst beim Aufklappen – sonst
+              // kommt der Hinweis nach dem Anruf.
+              <Badge variant="accentSubtle" className="shrink-0" title={dublettenText(dublette)}>
+                <CopyCheck className="size-3" />
+                {dublette.partner.length + 1}×
+              </Badge>
+            ) : null}
           </span>
           <span className="text-muted-foreground block truncate text-xs">{unterzeile}</span>
         </button>
@@ -193,6 +216,30 @@ export function LookupKarte({
                   </button>
                 ))}
               </span>
+            </div>
+          ) : null}
+
+          {dublette && partner?.length ? (
+            <div className="border-border/60 bg-accent-subtle flex flex-wrap items-baseline gap-x-3 gap-y-2 border-t px-5 py-3">
+              <span className="text-muted-foreground w-28 shrink-0 pt-0.5 text-[10.5px] font-semibold tracking-wide uppercase">
+                Dublette
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm leading-snug">{dublettenText(dublette)}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {partner.map((p) => (
+                    <button
+                      key={p.bezeichnung + p.suche}
+                      type="button"
+                      onClick={() => onSpringeZu(p.suche)}
+                      title="In der Liste anzeigen"
+                      className="border-border bg-card hover:bg-secondary focus-visible:ring-ring rounded-lg border px-2 py-1 text-xs font-semibold outline-none focus-visible:ring-2"
+                    >
+                      {p.bezeichnung}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           ) : null}
 

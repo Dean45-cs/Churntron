@@ -14,8 +14,11 @@ import { Button } from '@/components/ui/button'
 import { Input, Select } from '@/components/ui/field'
 import { Badge } from '@/components/ui/badge'
 import { buildReportingZeilen, reportingDateiname, zeilenAlsCsv } from '@/lib/lookup/export'
+import { findeDubletten, partnerBezeichnung } from '@/lib/lookup/dubletten'
+import { berechneFortschritt } from '@/lib/lookup/fortschritt'
 import { recKey } from '@/lib/lookup/parser'
 import { passt, suchText } from '@/lib/lookup/suche'
+import { abonniereMinute, jetztMinute, serverMinute } from '@/lib/lookup/uhr'
 import {
   abonniereStand,
   aendereStand,
@@ -26,6 +29,7 @@ import {
 import type { FormularStand, KampagnenTyp, LookupRecord, StatusWert } from '@/lib/lookup/types'
 import { leseDatei, schreibeOffeneDatei, type DateiMeta } from '@/lib/lookup/xlsx'
 import { cn } from '@/lib/utils'
+import { FortschrittKarte } from './fortschritt-karte'
 import { KampagnenFormular } from './kampagnen-formular'
 import { LookupKarte } from './lookup-karte'
 
@@ -222,16 +226,19 @@ export function LookupClient() {
   const keys = useMemo(() => records.map((r) => recKey(r)), [records])
   const verzoegerteSuche = useDeferredValue(suche)
 
+  // Gefiltert wird ueber INDIZES, nicht ueber Datensaetze: die Dubletten-Map
+  // ist nach Index adressiert, und so bleibt der Bezug ohne eine zweite
+  // Zuordnungstabelle erhalten.
   const gefiltert = useMemo(() => {
     const q = verzoegerteSuche.trim().toLowerCase()
-    const out: LookupRecord[] = []
+    const out: number[] = []
     for (let i = 0; i < records.length; i++) {
       const key = keys[i]!
       if (hideDone && stand.statusMap[key] === 'done') continue
       const notiz = stand.notizMap[key]
       const hay = notiz ? hayBasis[i] + '  ' + notiz.toLowerCase() : hayBasis[i]!
       if (!passt(hay, q)) continue
-      out.push(records[i]!)
+      out.push(i)
     }
     return out
   }, [records, keys, hayBasis, verzoegerteSuche, hideDone, stand.statusMap, stand.notizMap])
@@ -241,7 +248,8 @@ export function LookupClient() {
 
   // Ein Treffer bei aktiver Suche: Nummer gleich in die Zwischenablage.
   // Genau dafuer ist das Feld da – Nummer tippen, einfuegen, anrufen.
-  const einTreffer = suche.trim() && gefiltert.length === 1 ? gefiltert[0] : null
+  const einTreffer =
+    suche.trim() && gefiltert.length === 1 ? (records[gefiltert[0]!] ?? null) : null
   useEffect(() => {
     if (!einTreffer?.dial) return
     const marke = recKey(einTreffer) + '|' + einTreffer.dial
@@ -251,16 +259,18 @@ export function LookupClient() {
     kopiere(einTreffer.dial)
   }, [einTreffer, kopiere])
 
-  const { erledigt, zuPruefen } = useMemo(() => {
-    let d = 0
-    let c = 0
-    for (const key of keys) {
-      const s = stand.statusMap[key]
-      if (s === 'done') d++
-      else if (s === 'check') c++
-    }
-    return { erledigt: d, zuPruefen: c }
-  }, [keys, stand.statusMap])
+  // Die laufende Minute kommt aus einem externen Speicher, nicht aus dem
+  // Render-Pfad – Begruendung in uhr.ts.
+  const jetzt = useSyncExternalStore(abonniereMinute, jetztMinute, serverMinute)
+
+  const fortschritt = useMemo(
+    () => berechneFortschritt(keys, stand.statusMap, stand.tsMap, jetzt),
+    [keys, stand.statusMap, stand.tsMap, jetzt],
+  )
+
+  // Ueber ALLE Datensaetze, nicht nur die sichtbaren: der Zwilling einer Zeile
+  // steht gern hinter dem Schnitt bei 300 oder ausserhalb der Suche.
+  const dubletten = useMemo(() => findeDubletten(records), [records])
 
   /* ---------------- Exporte ---------------- */
 
@@ -445,12 +455,17 @@ export function LookupClient() {
         </div>
       </div>
 
+      {/* Der Stand der Schicht gehoert ueber die Liste, nicht in die Fusszeile:
+          er beantwortet die Frage, bevor man sie stellt. Die Meta-Zeile
+          darunter bleibt bei dem, was die Suche gerade zeigt. */}
+      <FortschrittKarte fortschritt={fortschritt} dubletten={dubletten.size} />
+
       <div className="text-muted-foreground mb-3 flex flex-wrap items-center justify-between gap-2 px-1 text-xs">
         <span>
           <b className="text-foreground tabular">{gefiltert.length.toLocaleString('de-DE')}</b>{' '}
           Treffer
-          {abgeschnitten ? ` (erste ${CAP})` : ''} · {erledigt} erledigt · {zuPruefen} zu prüfen
-          {erledigt + zuPruefen > 0 ? (
+          {abgeschnitten ? ` (erste ${CAP})` : ''}
+          {fortschritt.erledigt + fortschritt.zuPruefen > 0 ? (
             <>
               {' · '}
               <button
@@ -468,8 +483,10 @@ export function LookupClient() {
 
       <div className="flex flex-col gap-2.5">
         {sichtbar.length ? (
-          sichtbar.map((r) => {
+          sichtbar.map((i) => {
+            const r = records[i]!
             const key = recKey(r)
+            const dublette = dubletten.get(i)
             return (
               <LookupKarte
                 key={key + '|' + r._aoaIdx + '|' + r._file}
@@ -477,6 +494,8 @@ export function LookupClient() {
                 status={stand.statusMap[key] ?? ''}
                 notiz={stand.notizMap[key] ?? ''}
                 offen={offenKeys.has(key)}
+                dublette={dublette}
+                partner={dublette?.partner.map((p) => partnerBezeichnung(records[p]!))}
                 onToggleOffen={() =>
                   setOffenKeys((alt) => {
                     const neu = new Set(alt)
@@ -488,6 +507,7 @@ export function LookupClient() {
                 onStatus={(st) => setzeStatus(r, st)}
                 onNotiz={(wert) => setzeNotiz(r, wert)}
                 onCopy={kopiere}
+                onSpringeZu={setSuche}
               />
             )
           })

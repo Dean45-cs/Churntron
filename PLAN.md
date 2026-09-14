@@ -122,6 +122,13 @@ Datei ohne Speicher schlecht unterbringen.
   aus dem Umzug ein Datenschutzvorfall geworden.
 - SheetJS 0.20.3 liegt unter `src/vendor/sheetjs/` (Begründung im dortigen README)
   und wird erst beim ersten Dateizugriff nachgeladen.
+- **Stand der Schicht.** „47 von 120 geschafft" mit Balken, das Tempo der letzten
+  Stunde und – ab drei Erledigten und zehn Minuten Schicht – eine Restdauer-Schätzung.
+  Aus dem Zeitstempel gerechnet, der ohnehin mitläuft; keine zusätzliche Erfassung.
+- **Dubletten.** Einträge mit gleicher Rufnummer, Kundennummer oder Vertragsnummer
+  werden übergreifend zusammengefasst (Union-Find) und auf der Karte markiert, bevor
+  gewählt wird. Bewusst nur markiert: zwei Verträge desselben Kunden können zwei
+  Reportings brauchen.
 
 Offen geblieben: ein Export der Notizen für die eigene Nachbereitung. Bewusst nicht
 gebaut, weil er in keinen der beiden bestehenden Exporte gehört und niemand danach

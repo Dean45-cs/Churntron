@@ -84,6 +84,9 @@ src/
       export.ts           Reporting-CSV und Restliste – strukturgleich zum alten Tool
       storage.ts          Schichtstand im localStorage, inkl. der internen Notizen
       suche.ts            Suchtext je Datensatz
+      fortschritt.ts      Stand der Schicht, Tempo und Restdauer-Schätzung
+      dubletten.ts        Einträge, hinter denen ein Anruf steckt (Union-Find)
+      uhr.ts              die laufende Minute als externer Speicher
       xlsx.ts             Brücke zu SheetJS (nachgeladen, nur im Browser)
       types.ts
     commission-catalog.ts Provisionskatalog als Daten – Quelle für den Seed
@@ -196,6 +199,18 @@ Hier sind ebenfalls drei Dinge nicht verhandelbar:
    einmal entgegen.
 3. **Nichts verlässt den Browser.** Siehe oben – der Grund, warum das Modul hier
    stehen darf.
+
+Zwei Dinge, die dazugekommen sind und beide nichts am Export ändern:
+
+- **Der Fortschritt behauptet kein Tempo, das er nicht kennt.** `berechneFortschritt`
+  liefert Stundenschnitt und Restdauer erst ab drei Erledigten und zehn Minuten
+  Schicht, sonst `null`. Lieber keine Zahl als eine, die aus drei Anrufen entsteht.
+  Die laufende Minute kommt aus `uhr.ts` über `useSyncExternalStore` – `Date.now()`
+  hat im Render-Pfad nichts zu suchen.
+- **Dubletten werden markiert, nicht abgehakt.** Zwei Verträge desselben Kunden können
+  zwei Reportings brauchen; automatisch mitzumarkieren würde still die Auswertung
+  verändern. Die wichtigste Regel in `findeDubletten`: leere Felder sind kein Merkmal –
+  ohne diese Sperre landeten alle Zeilen ohne Kundennummer in einer Riesengruppe.
 
 Der Parser ist 1:1 aus `kampagnen_lookup_v1.1.0.html` übernommen und nur getypt.
 Er läuft seit Monaten gegen die echten PP-Listen; jede „Verbesserung" beim Portieren
